@@ -14,28 +14,46 @@ import (
 
 func AnalyzeBuild(buildDir string) {
 	//buildXmlFile := buildDir + "/build.xml"
+	start := time.Now()
 	buildLogFile := buildDir + "/log"
 
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
-		/*
-			buildLogReader := bufio.NewReader(buildLog)
-			fmt.Println(buildLogReader.ReadString('\n'))
-		*/
-		buildLogScanner := bufio.NewScanner(buildLog)
+		buildLogReader := bufio.NewReader(buildLog)
+		//fmt.Println(buildLogReader.ReadString('\n'))
+		//buildLogScanner := bufio.NewScanner(buildLog)
 		//WEBOS_DISTRO_TOPDIR_REVISION
-		start := time.Now()
-		for buildLogScanner.Scan() {
-			eachLine := buildLogScanner.Text()
-			validId := regexp.MustCompile(`^WEBOS_DISTRO_TOPDIR_REVISION.*`)
-			if validId.MatchString(eachLine) {
-				var _ = eachLine
-				//fmt.Println(eachLine)
+		//for buildLogScanner.Scan() {
+		/*
+			for buildLogScanner.Scan() {
+				eachLine := buildLogScanner.Text()
+				validId := regexp.MustCompile(`^WEBOS_DISTRO_TOPDIR_REVISION.*`)
+				if validId.MatchString(eachLine) {
+					var _ = eachLine
+					//fmt.Println(eachLine)
+				}
 			}
-			//fmt.Println(buildLogScanner.Text())
+		*/
+		var (
+			isPrefix bool  = true
+			err      error = nil
+			line     []byte
+		)
+		var _ = isPrefix
+
+		for err == nil {
+			line, isPrefix, err = buildLogReader.ReadLine()
+			//fmt.Println(string(line))
+			validId := regexp.MustCompile(`^FINISHED:\ .*`)
+			eachLine := string(line)
+			if validId.MatchString(eachLine) {
+				//fmt.Println(eachLine)
+				var _ = eachLine
+				break
+			}
 		}
-		fmt.Println(time.Since(start))
 	}
+	fmt.Println(time.Since(start))
 }
 
 func main() {
@@ -48,6 +66,7 @@ func main() {
 	log.Printf("Job: %s", *jobName)
 	log.Printf("Number of threads: %d", *nThread)
 	log.Printf("runtime: %d", runtime.NumCPU())
+	runtime.GOMAXPROCS(16)
 	job_dir := *jenkinsHome + "/jobs/" + *jobName + "/builds"
 	builds, err := ioutil.ReadDir(job_dir)
 	if err != nil {
@@ -55,7 +74,7 @@ func main() {
 	}
 
 	buildjobs := make(chan string, *nThread)
-	done := make(chan int)
+	done := make(chan int, *nThread)
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
 			for buildJob := range buildjobs {
@@ -82,6 +101,8 @@ func main() {
 		close(buildjobs)
 		fmt.Println(buildjobs)
 	}()
-	<-done
+	for m := 0; m < *nThread; m++ {
+		<-done
+	}
 	fmt.Println("END:")
 }
