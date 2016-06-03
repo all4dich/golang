@@ -49,27 +49,12 @@ func ParseMeta(params ...string) (paramData []string) {
 }
 
 func AnalyzeBuild(buildDir string) {
-	//buildXmlFile := buildDir + "/build.xml"
 	start := time.Now()
 	buildLogFile := buildDir + "/log"
 	buildInfo := make(map[string]string)
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
 		buildLogReader := bufio.NewReader(buildLog)
-		//fmt.Println(buildLogReader.ReadString('\n'))
-		//buildLogScanner := bufio.NewScanner(buildLog)
-		//WEBOS_DISTRO_TOPDIR_REVISION
-		//for buildLogScanner.Scan() {
-		/*
-			for buildLogScanner.Scan() {
-				eachLine := buildLogScanner.Text()
-				validId := regexp.MustCompile(`^WEBOS_DISTRO_TOPDIR_REVISION.*`)
-				if validId.MatchString(eachLine) {
-					var _ = eachLine
-					//fmt.Println(eachLine)
-				}
-			}
-		*/
 		var (
 			isPrefix bool  = true
 			err      error = nil
@@ -80,19 +65,16 @@ func AnalyzeBuild(buildDir string) {
 		validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
 		for err == nil {
 			line, isPrefix, err = buildLogReader.ReadLine()
-			//fmt.Println(string(line))
 			eachLine := string(line)
 			if validId.MatchString(eachLine) {
 				r := ParseMeta(eachLine)
 				if _, ok := buildInfo[r[0]]; !ok {
 					buildInfo[r[0]] = r[2]
-					//fmt.Println(r[0], r[2])
 				}
-				//var _ = eachLine
 			}
 		}
 	}
-	fmt.Println(time.Since(start))
+	fmt.Println("FINISHED: ", time.Since(start))
 }
 
 func main() {
@@ -117,14 +99,13 @@ func main() {
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
 			for buildJob := range buildjobs {
-				//time.Sleep(time.Millisecond * 100)
 				AnalyzeBuild(buildJob)
 			}
 			done <- 1
 		}(j)
 	}
 	go func() {
-		log.Println("Start: Building")
+		log.Println("Start: Getting build directories")
 		for _, build := range builds {
 			if build.IsDir() {
 				buildXmlFile := job_dir + "/" + build.Name() + "/build.xml"
@@ -136,9 +117,8 @@ func main() {
 				}
 			}
 		}
-		log.Println("END: Building")
+		log.Println("END: Getting build directories")
 		close(buildjobs)
-		fmt.Println(buildjobs)
 	}()
 	for m := 0; m < *nThread; m++ {
 		<-done
