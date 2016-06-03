@@ -9,14 +9,50 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strings"
 	"time"
 )
+
+func Filter(vs []string, f func(string) bool) []string {
+	vsf := make([]string, 0)
+	for _, v := range vs {
+		if f(v) {
+			vsf = append(vsf, v)
+		}
+	}
+	return vsf
+}
+
+func ParseMeta(params ...string) (paramData []string) {
+	data := ""
+	sep := ""
+	switch len(params) {
+	case 1:
+		data = params[0]
+		sep = " "
+	case 2:
+		data = params[0]
+		sep = params[1]
+	default:
+		return []string{}
+	}
+	paramData = Filter(strings.Split(data, sep), func(i string) bool {
+		if i == "" {
+			return false
+		} else if i == " " {
+			return false
+		} else {
+			return true
+		}
+	})
+	return paramData
+}
 
 func AnalyzeBuild(buildDir string) {
 	//buildXmlFile := buildDir + "/build.xml"
 	start := time.Now()
 	buildLogFile := buildDir + "/log"
-
+	buildInfo := make(map[string]string)
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
 		buildLogReader := bufio.NewReader(buildLog)
@@ -41,15 +77,18 @@ func AnalyzeBuild(buildDir string) {
 		)
 		var _ = isPrefix
 
+		validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
 		for err == nil {
 			line, isPrefix, err = buildLogReader.ReadLine()
 			//fmt.Println(string(line))
-			validId := regexp.MustCompile(`^FINISHED:\ .*`)
 			eachLine := string(line)
 			if validId.MatchString(eachLine) {
-				//fmt.Println(eachLine)
-				var _ = eachLine
-				break
+				r := ParseMeta(eachLine)
+				if _, ok := buildInfo[r[0]]; !ok {
+					buildInfo[r[0]] = r[2]
+					//fmt.Println(r[0], r[2])
+				}
+				//var _ = eachLine
 			}
 		}
 	}
