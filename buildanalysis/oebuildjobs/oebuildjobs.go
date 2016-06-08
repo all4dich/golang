@@ -90,3 +90,18 @@ type VerifyBuild struct {
 	RetriggerInfo RetriggerEvent  `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
 	Parameters    []EachParameter `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
 }
+
+type CauseAction struct {
+	XMLName xml.Name
+	Content []byte `xml:",innerxml"`
+}
+
+type Causes struct {
+	Causes []CauseAction `xml:",any"`
+}
+
+type OfficialBuild struct {
+	XMLName xml.Name `xml:"build"`
+	commonBuildAttr
+	Causes Causes `xml:"actions>hudson.model.CauseAction>causes"`
+}
