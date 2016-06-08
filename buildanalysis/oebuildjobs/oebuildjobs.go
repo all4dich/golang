@@ -84,13 +84,4 @@ type Build struct {
 	RetriggerInfo RetriggerEvent  `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
 	Parameters    []EachParameter `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
 	Description   string          `xml:"description"`
-	/*
-		Provider     Provider     `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>provider"`
-		Account      Account      `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>account"`
-		GerritChange GerritChange `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>change"`
-		PatchSet     PatchSet     `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>patchSet"`
-		Files        Files        `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>files>string"`
-		Comment      string       `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>comment"`
-		Approvals    []Approval   `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent>approvals>com.sonyericsson.hudson.plugins.gerrit.gerritevents.dto.attr.Approval"`
-	*/
 }
