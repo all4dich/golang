@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<build>
+  <actions>
+    <hudson.model.CauseAction>
+      <causes>
+        <hudson.model.Cause_-RemoteCause>
+          <addr>127.0.0.1</addr>
+        </hudson.model.Cause_-RemoteCause>
+      </causes>
+    </hudson.model.CauseAction>
+    <org.jenkinsci.plugins.envinject.EnvInjectPluginAction plugin="envinject@1.89">
+      <build class="build" reference="../../.."/>
+    </org.jenkinsci.plugins.envinject.EnvInjectPluginAction>
+    <hudson.plugins.git.util.BuildData plugin="git@2.4.2">
+      <buildsByBranchName>
+        <entry>
+          <string>origin/@drd4tv</string>
+          <hudson.plugins.git.util.Build>
+            <marked plugin="git-client@1.19.5">
+              <sha1>783277b3f051dda8022379fbf19f710a8dd45833</sha1>
+              <branches class="list">
+                <hudson.plugins.git.Branch>
+                  <sha1 reference="../../../sha1"/>
+                  <name>origin/@drd4tv</name>
+                </hudson.plugins.git.Branch>
+              </branches>
+            </marked>
+            <revision reference="../marked"/>
+            <hudsonBuildNumber>297</hudsonBuildNumber>
+          </hudson.plugins.git.util.Build>
+        </entry>
+      </buildsByBranchName>
+      <lastBuild reference="../buildsByBranchName/entry/hudson.plugins.git.util.Build"/>
+      <scmName></scmName>
+      <remoteUrls>
+        <string>ssh://wall.lge.com/starfish/build-starfish</string>
+      </remoteUrls>
+    </hudson.plugins.git.util.BuildData>
+    <hudson.plugins.git.GitTagAction plugin="git@2.4.2">
+      <tags class="hudson.util.CopyOnWriteMap$Tree">
+        <entry>
+          <string>origin/@drd4tv</string>
+          <list/>
+        </entry>
+      </tags>
+      <ws>/vol/users/gatekeeper.tvsw/cerberus_root/starfish-official-drd4tv</ws>
+    </hudson.plugins.git.GitTagAction>
+    <hudson.scm.SCMRevisionState_-None/>
+    <hudson.plugins.descriptionsetter.DescriptionSetterAction plugin="description-setter@1.8">
+      <description>&lt;li&gt;&lt;a href=&quot;http://webos-ci.lge.com/download/starfish/starfish-drd4tv-official-h15/297&quot; target=&quot;_blank&quot;&gt;Build results - HQ&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://ushquc001.palm.com/official_26/starfish-drd4tv-official-h15/297/&quot; target=&quot;_blank&quot;&gt;Build results - SVL&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;background-color:cyan;width:100px&quot; &gt; 3.3.0 / 02.02.97 &lt;/font&gt;&lt;/li&gt;&lt;br/&gt;&lt;li&gt;builds/drd4tv/297&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://svltools.lgsvl.com/releasenotes/build/starfish/drd4tv/official/h15/297/&quot;&gt;Release Notes&lt;/a&gt;&lt;/li&gt;</description>
+    </hudson.plugins.descriptionsetter.DescriptionSetterAction>
+    <com.sonyericsson.rebuild.RebuildAction plugin="rebuild@1.21"/>
+  </actions>
+  <queueId>66734</queueId>
+  <timestamp>1464851277673</timestamp>
+  <startTime>1464851277830</startTime>
+  <result>SUCCESS</result>
+  <description>&lt;li&gt;&lt;a href=&quot;http://webos-ci.lge.com/download/starfish/starfish-drd4tv-official-h15/297&quot; target=&quot;_blank&quot;&gt;Build results - HQ&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://ushquc001.palm.com/official_26/starfish-drd4tv-official-h15/297/&quot; target=&quot;_blank&quot;&gt;Build results - SVL&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;font style=&quot;background-color:cyan;width:100px&quot; &gt; 3.3.0 / 02.02.97 &lt;/font&gt;&lt;/li&gt;&lt;br/&gt;&lt;li&gt;builds/drd4tv/297&lt;/li&gt;&lt;li&gt;&lt;a href=&quot;http://svltools.lgsvl.com/releasenotes/build/starfish/drd4tv/official/h15/297/&quot;&gt;Release Notes&lt;/a&gt;&lt;/li&gt;</description>
+  <duration>10305587</duration>
+  <charset>UTF-8</charset>
+  <keepLog>false</keepLog>
+  <builtOn>swfarm-gateuobld31</builtOn>
+  <workspace>/vol/users/gatekeeper.tvsw/cerberus_root/starfish-official-drd4tv</workspace>
+  <hudsonVersion>1.649</hudsonVersion>
+  <scm class="hudson.plugins.git.GitChangeLogParser" plugin="git@2.4.2">
+    <authorOrCommitter>false</authorOrCommitter>
+  </scm>
+  <culprits class="com.google.common.collect.RegularImmutableSortedSet">
+    <string>joungyong.choi</string>
+  </culprits>
+</build>

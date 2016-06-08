@@ -81,6 +81,7 @@ type commonBuildAttr struct {
 	Result      string `xml:"result"`
 	Host        string `xml:"builtOn"`
 	Description string `xml:"description"`
+	Workspace   string `xml:"workspace"`
 }
 
 type VerifyBuild struct {
@@ -100,12 +101,15 @@ type Causes struct {
 	Causes []CauseAction `xml:",any"`
 }
 
+type GitBuildData struct {
+	BranchName    string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>branches>hudson.plugins.git.Branch>name"`
+	CommitSha1    string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>sha1"`
+	BuildNumber   int    `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>hudsonBuildNumber"`
+	RepositoryUrl string `xml:"remoteUrls>string"`
+}
 type OfficialBuild struct {
 	XMLName xml.Name `xml:"build"`
 	commonBuildAttr
-	Causes    Causes `xml:"actions>hudson.model.CauseAction>causes"`
-	BuildData struct {
-		XMLName xml.Name
-		Content string `xml:",innerxml"`
-	} `xml:"actions>hudson.plugins.git.util.BuildData"`
+	Causes       Causes       `xml:"actions>hudson.model.CauseAction>causes"`
+	GitBuildData GitBuildData `xml:"actions>hudson.plugins.git.util.BuildData"`
 }

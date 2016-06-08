@@ -48,7 +48,7 @@ func ExampleVerifyBuildXml() {
 
 func ExampleOfficialBuild() {
 	v := OfficialBuild{}
-	file, err := os.Open("/Users/sunjoo/temp/jenkins_home/jobs/starfish-drd4tv-official-h15/builds/lastSuccessfulBuild/build.xml")
+	file, err := os.Open("officialbuild.xml")
 	if err != nil {
 		fmt.Println("Error: Cannot open a file")
 		os.Exit(1)
@@ -60,13 +60,20 @@ func ExampleOfficialBuild() {
 		os.Exit(1)
 	}
 	err = xml.Unmarshal(dat, &v)
-	content := v.Causes.Causes[0].Content
 	tagname := v.Causes.Causes[0].XMLName
+	content := v.Causes.Causes[0].Content
 	_, c := getTagInfo(content)
 	fmt.Println(c)
 	fmt.Println(tagname.Local)
-	fmt.Println(v.BuildData.Content)
+	fmt.Println(v.GitBuildData.BranchName)
+	fmt.Println(v.GitBuildData.BuildNumber)
+	fmt.Println(v.GitBuildData.CommitSha1)
+	fmt.Println(v.Workspace)
 	// Output:
 	// 127.0.0.1
-
+	// hudson.model.Cause_-RemoteCause
+	// origin/@drd4tv
+	// 297
+	// 783277b3f051dda8022379fbf19f710a8dd45833
+	// /vol/users/gatekeeper.tvsw/cerberus_root/starfish-official-drd4tv
 }
