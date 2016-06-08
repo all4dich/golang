@@ -65,6 +65,7 @@ func ExampleOfficialBuild() {
 	_, c := getTagInfo(content)
 	fmt.Println(c)
 	fmt.Println(tagname.Local)
+	fmt.Println(v.BuildData.Content)
 	// Output:
 	// 127.0.0.1
 

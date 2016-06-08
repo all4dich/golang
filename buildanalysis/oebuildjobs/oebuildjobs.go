@@ -103,5 +103,9 @@ type Causes struct {
 type OfficialBuild struct {
 	XMLName xml.Name `xml:"build"`
 	commonBuildAttr
-	Causes Causes `xml:"actions>hudson.model.CauseAction>causes"`
+	Causes    Causes `xml:"actions>hudson.model.CauseAction>causes"`
+	BuildData struct {
+		XMLName xml.Name
+		Content string `xml:",innerxml"`
+	} `xml:"actions>hudson.plugins.git.util.BuildData"`
 }
