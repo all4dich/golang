@@ -57,6 +57,7 @@ func AnalyzeBuild(buildDir string) {
 	buildXmlFile := buildDir + "/build.xml"
 	buildEle := strings.Split(buildDir, "/")
 	buildJobName := buildEle[len(buildEle)-3]
+	buildNumber := buildEle[len(buildEle)-1]
 	buildInfo := make(map[string]string)
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
@@ -94,8 +95,8 @@ func AnalyzeBuild(buildDir string) {
 	}
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	fmt.Printf("%s,%s\n", buildJobName, xmlEntity)
-	fmt.Println("FINISHED: ", time.Since(start))
+	fmt.Printf("%s,%s,%s\n", buildJobName, buildNumber, xmlEntity)
+	log.Println("FINISHED: ", time.Since(start))
 }
 
 func main() {
@@ -117,6 +118,7 @@ func main() {
 
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
+	fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
 			for buildJob := range buildjobs {
@@ -127,8 +129,9 @@ func main() {
 	}
 	go func() {
 		log.Println("Start: Getting build directories")
+		validInt := regexp.MustCompile(`^\d+$`)
 		for _, build := range builds {
-			if build.IsDir() {
+			if build.IsDir() && validInt.MatchString(build.Name()) {
 				buildXmlFile := job_dir + "/" + build.Name() + "/build.xml"
 				logFile := job_dir + "/" + build.Name() + "/log"
 				_, err1 := os.Stat(buildXmlFile)
@@ -144,5 +147,5 @@ func main() {
 	for m := 0; m < *nThread; m++ {
 		<-done
 	}
-	fmt.Println("END:")
+	log.Println("END:")
 }

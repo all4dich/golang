@@ -55,7 +55,7 @@ type TEvent struct {
 	PatchSet     PatchSet     `xml:"patchSet"`
 	Files        Files        `xml:"files>string"`
 	Comment      string       `xml:"comment"`
-	ReceivedOn   int          `xml:"receivedOn"`
+	ReceivedOn   int64        `xml:"receivedOn"`
 	Approvals    []Approval   `xml:"approvals>com.sonyericsson.hudson.plugins.gerrit.gerritevents.dto.attr.Approval"`
 }
 
@@ -79,8 +79,8 @@ type EachParameter struct {
 }
 
 type commonBuildAttr struct {
-	StartTime   int    `xml:"startTime"`
-	Duration    int    `xml:"duration"`
+	StartTime   int64  `xml:"startTime"`
+	Duration    int64  `xml:"duration"`
 	Result      string `xml:"result"`
 	Host        string `xml:"builtOn"`
 	Description string `xml:"description"`
@@ -119,8 +119,9 @@ type OfficialBuild struct {
 
 func (v VerifyBuild) String() string {
 	duration := float64(v.Duration) / 1000
-	startTime := time.Unix(int64(v.StartTime), 0)
-	gerritReceived := time.Unix(int64(v.BuildEvent.ReceivedOn), 0)
+	startTime := time.Unix(v.StartTime/1000, 0)
+	gerritReceived := time.Unix(v.BuildEvent.ReceivedOn/1000, 0)
+	timeDiff := float64(v.StartTime-v.BuildEvent.ReceivedOn) / 1000
 	// Result, buildOn, Duration, Start time, Gerrit received
-	return fmt.Sprintf("%s,%s,%.2f,%s,%s", v.Result, v.Host, duration, startTime, gerritReceived)
+	return fmt.Sprintf("%s,%s,%.2fs,%s,%s,%.2fs", v.Result, v.Host, duration, startTime, gerritReceived, timeDiff)
 }
