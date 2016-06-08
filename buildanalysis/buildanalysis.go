@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/xml"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -11,6 +12,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 )
 
 func Filter(vs []string, f func(string) bool) []string {
@@ -51,6 +54,9 @@ func ParseMeta(params ...string) (paramData []string) {
 func AnalyzeBuild(buildDir string) {
 	start := time.Now()
 	buildLogFile := buildDir + "/log"
+	buildXmlFile := buildDir + "/build.xml"
+	buildEle := strings.Split(buildDir, "/")
+	buildJobName := buildEle[len(buildEle)-3]
 	buildInfo := make(map[string]string)
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
@@ -74,6 +80,21 @@ func AnalyzeBuild(buildDir string) {
 			}
 		}
 	}
+	var _ = xml.Header
+	var _ = oebuildjobs.VerifyBuild{}
+	var _ = buildXmlFile
+	buildXml, err := os.Open(buildXmlFile)
+	if err != nil {
+		log.Fatal("Can't open a file " + buildXmlFile)
+	}
+	r := bufio.NewReader(buildXml)
+	buildXmlDat, err := ioutil.ReadAll(r)
+	if err != nil {
+		log.Fatal("ERROR: Cannot read data from a xml file ")
+	}
+	xmlEntity := oebuildjobs.VerifyBuild{}
+	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
+	fmt.Printf("%s,%s\n", buildJobName, xmlEntity)
 	fmt.Println("FINISHED: ", time.Since(start))
 }
 

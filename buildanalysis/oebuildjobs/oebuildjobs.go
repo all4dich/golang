@@ -1,6 +1,8 @@
 package oebuildjobs
 
 import "encoding/xml"
+import "fmt"
+import "time"
 
 type Account struct {
 	Name     string `xml:"name"`
@@ -53,6 +55,7 @@ type TEvent struct {
 	PatchSet     PatchSet     `xml:"patchSet"`
 	Files        Files        `xml:"files>string"`
 	Comment      string       `xml:"comment"`
+	ReceivedOn   int          `xml:"receivedOn"`
 	Approvals    []Approval   `xml:"approvals>com.sonyericsson.hudson.plugins.gerrit.gerritevents.dto.attr.Approval"`
 }
 
@@ -112,4 +115,12 @@ type OfficialBuild struct {
 	commonBuildAttr
 	Causes       Causes       `xml:"actions>hudson.model.CauseAction>causes"`
 	GitBuildData GitBuildData `xml:"actions>hudson.plugins.git.util.BuildData"`
+}
+
+func (v VerifyBuild) String() string {
+	duration := float64(v.Duration) / 1000
+	startTime := time.Unix(int64(v.StartTime), 0)
+	gerritReceived := time.Unix(int64(v.BuildEvent.ReceivedOn), 0)
+	// Result, buildOn, Duration, Start time, Gerrit received
+	return fmt.Sprintf("%s,%s,%.2f,%s,%s", v.Result, v.Host, duration, startTime, gerritReceived)
 }
