@@ -74,14 +74,19 @@ type EachParameter struct {
 	Name  string `xml:"name"`
 	Value string `xml:"value"`
 }
-type Build struct {
-	XMLName       xml.Name        `xml:"build"`
-	StartTime     int             `xml:"startTime"`
-	Duration      int             `xml:"duration"`
-	Result        string          `xml:"result"`
-	Host          string          `xml:"builtOn"`
+
+type commonBuildAttr struct {
+	StartTime   int    `xml:"startTime"`
+	Duration    int    `xml:"duration"`
+	Result      string `xml:"result"`
+	Host        string `xml:"builtOn"`
+	Description string `xml:"description"`
+}
+
+type VerifyBuild struct {
+	XMLName xml.Name `xml:"build"`
+	commonBuildAttr
 	BuildEvent    TEvent          `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent"`
 	RetriggerInfo RetriggerEvent  `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
 	Parameters    []EachParameter `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
-	Description   string          `xml:"description"`
 }
