@@ -70,9 +70,27 @@ func AnalyzeBuild(buildDir string) {
 		var _ = isPrefix
 
 		validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
+		validTimeBuildsh := regexp.MustCompile(`.*build\.sh\ +--machines*`)
+		validRmBuild := regexp.MustCompile(`.*rm\ -rf.*BUILD$`)
+		validRmBuildArtifacts := regexp.MustCompile(`.*rm\ -rf.*BUILD-ARTIFACTS$`)
+		validRmDownloads := regexp.MustCompile(`.*rm\ -rf.*downloads$`)
+		validRmSstatecache := regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
+		validRsyncArtifacts := regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
+		validNoOfScratch := regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
+		/*
+		   time_build_sh = 0.0
+		   time_rm_BUILD = 0.0
+		   time_rm_BUILD_ARTIFACTS = 0.0
+		   time_rm_downloads = 0.0
+		   time_rm_sstatecache = 0.0
+		   time_rsync_artifacts = 0.0
+		   time_rsync_ipk = 0.0
+		   num_of_from_scratch = 0
+		*/
 		for err == nil {
 			line, isPrefix, err = buildLogReader.ReadLine()
 			eachLine := string(line)
+			eachLineSplit := strings.Split(eachLine, " ")
 			if validId.MatchString(eachLine) {
 				r := ParseMeta(eachLine)
 				if _, ok := buildInfo[r[0]]; !ok {
@@ -80,6 +98,38 @@ func AnalyzeBuild(buildDir string) {
 						buildInfo[r[0]] = r[2]
 					}
 				}
+			}
+			if validTimeBuildsh.MatchString(eachLine) {
+				buildInfo["time_build_sh"] = eachLineSplit[2]
+				continue
+			}
+			if validRmBuild.MatchString(eachLine) {
+				buildInfo["time_rm_BUILD"] = eachLineSplit[2]
+				continue
+			}
+			if validRmBuildArtifacts.MatchString(eachLine) {
+				buildInfo["time_rm_BUILD_ARTIFACTS"] = eachLineSplit[2]
+				continue
+			}
+			if validRmDownloads.MatchString(eachLine) {
+				buildInfo["time_rm_downloads"] = eachLineSplit[2]
+				continue
+			}
+			if validRmDownloads.MatchString(eachLine) {
+				buildInfo["time_rm_downloads"] = eachLineSplit[2]
+				continue
+			}
+			if validRmSstatecache.MatchString(eachLine) {
+				buildInfo["time_rm_sstatecache"] = eachLineSplit[2]
+				continue
+			}
+			if validNoOfScratch.MatchString(eachLine) {
+				buildInfo["num_of_from_scratch"] = eachLineSplit[2]
+				continue
+			}
+			if validRsyncArtifacts.MatchString(eachLine) {
+				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
+				continue
 			}
 		}
 	}
@@ -97,7 +147,7 @@ func AnalyzeBuild(buildDir string) {
 	}
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	fmt.Printf("%s,%s,%s\n", buildJobName, buildNumber, xmlEntity)
+	fmt.Printf("%s,%s,%s,%s\n", buildJobName, buildNumber, xmlEntity, buildInfo["time_build_sh"])
 	log.Println("FINISHED: ", time.Since(start))
 }
 
