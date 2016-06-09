@@ -171,6 +171,8 @@ func main() {
 				i_buildnumber, _ := strconv.Atoi(s_ele[1])
 				i_duration, _ := strconv.ParseFloat(s_ele[4], 64)
 				i_timediff, _ := strconv.ParseFloat(s_ele[7], 64)
+				i_start, _ := strconv.ParseFloat(s_ele[5], 64)
+				i_received, _ := strconv.ParseFloat(s_ele[6], 64)
 				coll.Insert(&struct {
 					ID             bson.ObjectId `bson:"_id,omitempty"`
 					Jobname        string
@@ -178,8 +180,8 @@ func main() {
 					Result         string
 					Host           string
 					Duration       float64
-					Start          string
-					Gerritreceived string
+					Start          float64
+					Gerritreceived float64
 					Timediff       float64
 				}{
 					Jobname:        s_ele[0],
@@ -187,8 +189,8 @@ func main() {
 					Result:         s_ele[2],
 					Host:           s_ele[3],
 					Duration:       i_duration,
-					Start:          s_ele[5],
-					Gerritreceived: s_ele[6],
+					Start:          i_start,
+					Gerritreceived: i_received,
 					Timediff:       i_timediff,
 				})
 			}

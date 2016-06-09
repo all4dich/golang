@@ -119,9 +119,9 @@ type OfficialBuild struct {
 
 func (v VerifyBuild) String() string {
 	duration := float64(v.Duration) / 1000
-	startTime := time.Unix(v.StartTime/1000, 0)
-	gerritReceived := time.Unix(v.BuildEvent.ReceivedOn/1000, 0)
-	timeDiff := float64(v.StartTime-v.BuildEvent.ReceivedOn) / 1000
+	startTime := float64(v.StartTime / 1000)
+	gerritReceived := float64(v.BuildEvent.ReceivedOn / 1000)
+	timeDiff := startTime - gerritReceived
 	// Result, buildOn, Duration, Start time, Gerrit received
-	return fmt.Sprintf("%s,%s,%.2f,%s,%s,%.2f", v.Result, v.Host, duration, startTime, gerritReceived, timeDiff)
+	return fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f", v.Result, v.Host, duration, startTime, gerritReceived, timeDiff)
 }
