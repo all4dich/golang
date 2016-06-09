@@ -28,6 +28,25 @@ var validRmSstatecache = regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
 var validRsyncArtifacts = regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
 var validNoOfScratch = regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
 
+func CheckBuildExistInDB(buildDir string, coll *mgo.Collection) bool {
+	buildEle := strings.Split(buildDir, "/")
+	buildJobName := buildEle[len(buildEle)-3]
+	buildNumber, _ := strconv.Atoi(buildEle[len(buildEle)-1])
+	//n, err := coll.Find(bson.M{"jobname": buildJobName}).Select(bson.M{"buildnumber": buildNumber}).Count()
+	n, err := coll.Find(bson.M{"jobname": buildJobName, "$and": []interface{}{
+		bson.M{"buildnumber": buildNumber},
+	}}).Count()
+	if err != nil {
+		log.Println(err)
+		return true
+	}
+	if n == 1 {
+		return true
+	} else {
+		return false
+	}
+}
+
 func Filter(vs []string, f func(string) bool) []string {
 	vsf := make([]string, 0)
 	for _, v := range vs {
@@ -102,7 +121,8 @@ func AnalyzeBuild(buildDir string) string {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
-			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
+			//if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
 				continue
 			}
@@ -122,7 +142,7 @@ func AnalyzeBuild(buildDir string) string {
 	}
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, xmlEntity, buildInfo["time_build_sh"])
+	return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity)
 }
 
 func main() {
@@ -166,36 +186,57 @@ func main() {
 				panic(err)
 			}
 			for buildJob := range buildjobs {
-				s := AnalyzeBuild(buildJob)
-				s_ele := strings.Split(s, ",")
-				i_buildnumber, _ := strconv.Atoi(s_ele[1])
-				i_duration, _ := strconv.ParseFloat(s_ele[4], 64)
-				i_start, _ := strconv.ParseFloat(s_ele[5], 64)
-				i_received, _ := strconv.ParseFloat(s_ele[6], 64)
-				i_timediff, _ := strconv.ParseFloat(s_ele[7], 64)
-				i_buildsh, _ := strconv.ParseFloat(s_ele[8], 64)
-				coll.Insert(&struct {
-					ID             bson.ObjectId `bson:"_id,omitempty"`
-					Jobname        string
-					Buildnumber    int
-					Result         string
-					Host           string
-					Duration       float64
-					Start          float64
-					Gerritreceived float64
-					Timediff       float64
-					Build_sh       float64
-				}{
-					Jobname:        s_ele[0],
-					Buildnumber:    i_buildnumber,
-					Result:         s_ele[2],
-					Host:           s_ele[3],
-					Duration:       i_duration,
-					Start:          i_start,
-					Gerritreceived: i_received,
-					Timediff:       i_timediff,
-					Build_sh:       i_buildsh,
-				})
+				isExist := CheckBuildExistInDB(buildJob, coll)
+				if isExist {
+					log.Println("DUPLICATE: " + buildJob)
+				} else {
+					s := AnalyzeBuild(buildJob)
+					s_ele := strings.Split(s, ",")
+					i_jobname := s_ele[0]
+					i_buildnumber, _ := strconv.Atoi(s_ele[1])
+					i_buildsh, _ := strconv.ParseFloat(s_ele[2], 64)
+					i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
+					i_start, _ := strconv.ParseFloat(s_ele[6], 64)
+					i_received, _ := strconv.ParseFloat(s_ele[7], 64)
+					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
+					i_project := s_ele[9]
+					i_branch := s_ele[10]
+					i_number, _ := strconv.Atoi(s_ele[11])
+					i_url := s_ele[12]
+					coll.Remove(bson.M{"jobname": s_ele[0], "$and": []interface{}{
+						bson.M{"buildnumber": i_buildnumber},
+					}})
+					coll.Insert(&struct {
+						ID             bson.ObjectId `bson:"_id,omitempty"`
+						Jobname        string
+						Buildnumber    int
+						Result         string
+						Host           string
+						Duration       float64
+						Start          float64
+						Gerritreceived float64
+						Timediff       float64
+						Build_sh       float64
+						Project        string
+						Branch         string
+						Number         int
+						Url            string
+					}{
+						Jobname:        i_jobname,
+						Buildnumber:    i_buildnumber,
+						Result:         s_ele[3],
+						Host:           s_ele[4],
+						Duration:       i_duration,
+						Start:          i_start,
+						Gerritreceived: i_received,
+						Timediff:       i_timediff,
+						Build_sh:       i_buildsh,
+						Project:        i_project,
+						Branch:         i_branch,
+						Number:         i_number,
+						Url:            i_url,
+					})
+				}
 			}
 			done <- 1
 		}(j)

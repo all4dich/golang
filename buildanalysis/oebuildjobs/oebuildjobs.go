@@ -122,5 +122,9 @@ func (v VerifyBuild) String() string {
 	gerritReceived := float64(v.BuildEvent.ReceivedOn / 1000)
 	timeDiff := startTime - gerritReceived
 	// Result, buildOn, Duration, Start time, Gerrit received
-	return fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f", v.Result, v.Host, duration, startTime, gerritReceived, timeDiff)
+	return fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f,%s,%s,%d,%s", v.Result, v.Host, duration, startTime,
+		gerritReceived, timeDiff, v.BuildEvent.GerritChange.Project, v.BuildEvent.GerritChange.Branch,
+		v.BuildEvent.GerritChange.Number,
+		v.BuildEvent.GerritChange.Url,
+	)
 }
