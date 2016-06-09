@@ -16,6 +16,15 @@ import (
 	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 )
 
+var validId = regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
+var validTimeBuildsh = regexp.MustCompile(`.*build\.sh\ +--machines*`)
+var validRmBuild = regexp.MustCompile(`.*rm\ -rf.*BUILD$`)
+var validRmBuildArtifacts = regexp.MustCompile(`.*rm\ -rf.*BUILD-ARTIFACTS$`)
+var validRmDownloads = regexp.MustCompile(`.*rm\ -rf.*downloads$`)
+var validRmSstatecache = regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
+var validRsyncArtifacts = regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
+var validNoOfScratch = regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
+
 func Filter(vs []string, f func(string) bool) []string {
 	vsf := make([]string, 0)
 	for _, v := range vs {
@@ -53,6 +62,7 @@ func ParseMeta(params ...string) (paramData []string) {
 
 func AnalyzeBuild(buildDir string) {
 	start := time.Now()
+	var _ = start
 	buildLogFile := buildDir + "/log"
 	buildXmlFile := buildDir + "/build.xml"
 	buildEle := strings.Split(buildDir, "/")
@@ -68,15 +78,17 @@ func AnalyzeBuild(buildDir string) {
 			line     []byte
 		)
 		var _ = isPrefix
-
-		validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
-		validTimeBuildsh := regexp.MustCompile(`.*build\.sh\ +--machines*`)
-		validRmBuild := regexp.MustCompile(`.*rm\ -rf.*BUILD$`)
-		validRmBuildArtifacts := regexp.MustCompile(`.*rm\ -rf.*BUILD-ARTIFACTS$`)
-		validRmDownloads := regexp.MustCompile(`.*rm\ -rf.*downloads$`)
-		validRmSstatecache := regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
-		validRsyncArtifacts := regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
-		validNoOfScratch := regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
+		keyMap := map[string]string{"BB_VERSION": "", "BUILD_SYS": "", "DATETIME": "", "DISTRO": "", "DISTRO_VERSION": "", "MACHINE": "", "NATIVELSBSTRING": "", "TARGET_FPU": "", "TARGET_SYS": "", "TUNE_FEATURES": "", "WEBOS_DISTRO_BUILD_ID": "", "WEBOS_DISTRO_MANUFACTURING_VERSION": "", "WEBOS_DISTRO_RELEA    SE_CODENAME": "", "WEBOS_DISTRO_TOPDIR_DESCRIBE": "", "WEBOS_DISTRO_TOPDIR_REVISION": "", "WEBOS_ENCRYPTION_KEY_TYPE": "", "meta": "", "meta-qt5": "", "meta-starfish-product": ""}
+		/*
+			validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
+			validTimeBuildsh := regexp.MustCompile(`.*build\.sh\ +--machines*`)
+			validRmBuild := regexp.MustCompile(`.*rm\ -rf.*BUILD$`)
+			validRmBuildArtifacts := regexp.MustCompile(`.*rm\ -rf.*BUILD-ARTIFACTS$`)
+			validRmDownloads := regexp.MustCompile(`.*rm\ -rf.*downloads$`)
+			validRmSstatecache := regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
+			validRsyncArtifacts := regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
+			validNoOfScratch := regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
+		*/
 		/*
 		   time_build_sh = 0.0
 		   time_rm_BUILD = 0.0
@@ -91,46 +103,71 @@ func AnalyzeBuild(buildDir string) {
 			line, isPrefix, err = buildLogReader.ReadLine()
 			eachLine := string(line)
 			eachLineSplit := strings.Split(eachLine, " ")
-			if validId.MatchString(eachLine) {
-				r := ParseMeta(eachLine)
-				if _, ok := buildInfo[r[0]]; !ok {
-					if len(r) == 3 {
-						buildInfo[r[0]] = r[2]
-					}
+			r := ParseMeta(eachLine)
+			r_length := len(r)
+			var _ = eachLineSplit
+			if _, ok := keyMap[eachLineSplit[0]]; ok {
+				if r_length == 3 {
+					buildInfo[r[0]] = r[2]
 				}
 			}
-			if validTimeBuildsh.MatchString(eachLine) {
-				buildInfo["time_build_sh"] = eachLineSplit[2]
+			if r_length > 5 && r[0] == "NOTE:" && r[1] == "do_populate_lic:" && r[3] == "sstate" && r[4] == "reuse" {
+				buildInfo["num_of_from_scratch"] = eachLineSplit[7]
 				continue
 			}
-			if validRmBuild.MatchString(eachLine) {
-				buildInfo["time_rm_BUILD"] = eachLineSplit[2]
-				continue
-			}
-			if validRmBuildArtifacts.MatchString(eachLine) {
-				buildInfo["time_rm_BUILD_ARTIFACTS"] = eachLineSplit[2]
-				continue
-			}
-			if validRmDownloads.MatchString(eachLine) {
-				buildInfo["time_rm_downloads"] = eachLineSplit[2]
-				continue
-			}
-			if validRmDownloads.MatchString(eachLine) {
-				buildInfo["time_rm_downloads"] = eachLineSplit[2]
-				continue
-			}
-			if validRmSstatecache.MatchString(eachLine) {
-				buildInfo["time_rm_sstatecache"] = eachLineSplit[2]
-				continue
-			}
-			if validNoOfScratch.MatchString(eachLine) {
-				buildInfo["num_of_from_scratch"] = eachLineSplit[2]
-				continue
-			}
-			if validRsyncArtifacts.MatchString(eachLine) {
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && r[17] == "BUILD-ARTIFACTS/build_changes.log" {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
+				buildInfo["time_build_sh"] = eachLineSplit[2]
+				continue
+			}
+			/*
+				var _ = keyMap
+				if validId.MatchString(eachLine) {
+					//r := ParseMeta(eachLine)
+					if _, ok := buildInfo[r[0]]; !ok {
+						if len(r) == 3 {
+							buildInfo[r[0]] = r[2]
+						}
+					}
+				}
+			*/
+			/*
+				if validTimeBuildsh.MatchString(eachLine) {
+					buildInfo["time_build_sh"] = eachLineSplit[2]
+					continue
+				}
+						if validRmBuild.MatchString(eachLine) {
+							buildInfo["time_rm_BUILD"] = eachLineSplit[2]
+							continue
+						}
+						if validRmBuildArtifacts.MatchString(eachLine) {
+							buildInfo["time_rm_BUILD_ARTIFACTS"] = eachLineSplit[2]
+							continue
+						}
+						if validRmDownloads.MatchString(eachLine) {
+							buildInfo["time_rm_downloads"] = eachLineSplit[2]
+							continue
+						}
+						if validRmDownloads.MatchString(eachLine) {
+							buildInfo["time_rm_downloads"] = eachLineSplit[2]
+							continue
+						}
+						if validRmSstatecache.MatchString(eachLine) {
+							buildInfo["time_rm_sstatecache"] = eachLineSplit[2]
+							continue
+						}
+					if validNoOfScratch.MatchString(eachLine) {
+						buildInfo["num_of_from_scratch"] = eachLineSplit[2]
+						continue
+					}
+					if validRsyncArtifacts.MatchString(eachLine) {
+						buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
+						continue
+					}
+			*/
 		}
 	}
 	var _ = xml.Header
@@ -148,7 +185,7 @@ func AnalyzeBuild(buildDir string) {
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
 	fmt.Printf("%s,%s,%s,%s\n", buildJobName, buildNumber, xmlEntity, buildInfo["time_build_sh"])
-	log.Println("FINISHED: ", time.Since(start))
+	//log.Println("FINISHED: ", time.Since(start))
 }
 
 func main() {
@@ -190,6 +227,8 @@ func main() {
 				_, err2 := os.Stat(logFile)
 				if err1 == nil && err2 == nil {
 					buildjobs <- job_dir + "/" + build.Name()
+				} else {
+					log.Println("INFO: " + build.Name() + " can't be added ")
 				}
 			}
 		}
