@@ -76,7 +76,9 @@ func AnalyzeBuild(buildDir string) {
 			if validId.MatchString(eachLine) {
 				r := ParseMeta(eachLine)
 				if _, ok := buildInfo[r[0]]; !ok {
-					buildInfo[r[0]] = r[2]
+					if len(r) == 3 {
+						buildInfo[r[0]] = r[2]
+					}
 				}
 			}
 		}
