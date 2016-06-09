@@ -5,11 +5,14 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -60,7 +63,7 @@ func ParseMeta(params ...string) (paramData []string) {
 	return paramData
 }
 
-func AnalyzeBuild(buildDir string) {
+func AnalyzeBuild(buildDir string) string {
 	start := time.Now()
 	var _ = start
 	buildLogFile := buildDir + "/log"
@@ -79,26 +82,6 @@ func AnalyzeBuild(buildDir string) {
 		)
 		var _ = isPrefix
 		keyMap := map[string]string{"BB_VERSION": "", "BUILD_SYS": "", "DATETIME": "", "DISTRO": "", "DISTRO_VERSION": "", "MACHINE": "", "NATIVELSBSTRING": "", "TARGET_FPU": "", "TARGET_SYS": "", "TUNE_FEATURES": "", "WEBOS_DISTRO_BUILD_ID": "", "WEBOS_DISTRO_MANUFACTURING_VERSION": "", "WEBOS_DISTRO_RELEA    SE_CODENAME": "", "WEBOS_DISTRO_TOPDIR_DESCRIBE": "", "WEBOS_DISTRO_TOPDIR_REVISION": "", "WEBOS_ENCRYPTION_KEY_TYPE": "", "meta": "", "meta-qt5": "", "meta-starfish-product": ""}
-		/*
-			validId := regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
-			validTimeBuildsh := regexp.MustCompile(`.*build\.sh\ +--machines*`)
-			validRmBuild := regexp.MustCompile(`.*rm\ -rf.*BUILD$`)
-			validRmBuildArtifacts := regexp.MustCompile(`.*rm\ -rf.*BUILD-ARTIFACTS$`)
-			validRmDownloads := regexp.MustCompile(`.*rm\ -rf.*downloads$`)
-			validRmSstatecache := regexp.MustCompile(`.*rm\ -rf.*sstate-cache$`)
-			validRsyncArtifacts := regexp.MustCompile(`.*rsync\ -arz.*\ BUILD-ARTIFACTS.*`)
-			validNoOfScratch := regexp.MustCompile(`NOTE:\s+do_populate_lic.*sstate.*`)
-		*/
-		/*
-		   time_build_sh = 0.0
-		   time_rm_BUILD = 0.0
-		   time_rm_BUILD_ARTIFACTS = 0.0
-		   time_rm_downloads = 0.0
-		   time_rm_sstatecache = 0.0
-		   time_rsync_artifacts = 0.0
-		   time_rsync_ipk = 0.0
-		   num_of_from_scratch = 0
-		*/
 		for err == nil {
 			line, isPrefix, err = buildLogReader.ReadLine()
 			eachLine := string(line)
@@ -123,51 +106,6 @@ func AnalyzeBuild(buildDir string) {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
 				continue
 			}
-			/*
-				var _ = keyMap
-				if validId.MatchString(eachLine) {
-					//r := ParseMeta(eachLine)
-					if _, ok := buildInfo[r[0]]; !ok {
-						if len(r) == 3 {
-							buildInfo[r[0]] = r[2]
-						}
-					}
-				}
-			*/
-			/*
-				if validTimeBuildsh.MatchString(eachLine) {
-					buildInfo["time_build_sh"] = eachLineSplit[2]
-					continue
-				}
-						if validRmBuild.MatchString(eachLine) {
-							buildInfo["time_rm_BUILD"] = eachLineSplit[2]
-							continue
-						}
-						if validRmBuildArtifacts.MatchString(eachLine) {
-							buildInfo["time_rm_BUILD_ARTIFACTS"] = eachLineSplit[2]
-							continue
-						}
-						if validRmDownloads.MatchString(eachLine) {
-							buildInfo["time_rm_downloads"] = eachLineSplit[2]
-							continue
-						}
-						if validRmDownloads.MatchString(eachLine) {
-							buildInfo["time_rm_downloads"] = eachLineSplit[2]
-							continue
-						}
-						if validRmSstatecache.MatchString(eachLine) {
-							buildInfo["time_rm_sstatecache"] = eachLineSplit[2]
-							continue
-						}
-					if validNoOfScratch.MatchString(eachLine) {
-						buildInfo["num_of_from_scratch"] = eachLineSplit[2]
-						continue
-					}
-					if validRsyncArtifacts.MatchString(eachLine) {
-						buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
-						continue
-					}
-			*/
 		}
 	}
 	var _ = xml.Header
@@ -184,8 +122,7 @@ func AnalyzeBuild(buildDir string) {
 	}
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	fmt.Printf("%s,%s,%s,%s\n", buildJobName, buildNumber, xmlEntity, buildInfo["time_build_sh"])
-	//log.Println("FINISHED: ", time.Since(start))
+	return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, xmlEntity, buildInfo["time_build_sh"])
 }
 
 func main() {
@@ -198,7 +135,6 @@ func main() {
 	log.Printf("Job: %s", *jobName)
 	log.Printf("Number of threads: %d", *nThread)
 	log.Printf("runtime: %d", runtime.NumCPU())
-	runtime.GOMAXPROCS(16)
 	job_dir := *jenkinsHome + "/jobs/" + *jobName + "/builds"
 	builds, err := ioutil.ReadDir(job_dir)
 	if err != nil {
@@ -210,8 +146,51 @@ func main() {
 	fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
+			session, err := mgo.Dial("156.147.69.55:27017")
+			if err != nil {
+				panic(err)
+			}
+			defer session.Close()
+			db := session.DB("git_api_server")
+			db.Login("log_manager", "Sanfrancisco")
+			coll := db.C("verifyjob")
+			index := mgo.Index{
+				Key:        []string{"buildjob", "data"},
+				Unique:     true,
+				DropDups:   true,
+				Background: true,
+				Sparse:     true,
+			}
+			err = coll.EnsureIndex(index)
+			if err != nil {
+				panic(err)
+			}
 			for buildJob := range buildjobs {
-				AnalyzeBuild(buildJob)
+				s := AnalyzeBuild(buildJob)
+				s_ele := strings.Split(s, ",")
+				i_buildnumber, _ := strconv.Atoi(s_ele[1])
+				i_duration, _ := strconv.ParseFloat(s_ele[4], 64)
+				i_timediff, _ := strconv.ParseFloat(s_ele[7], 64)
+				coll.Insert(&struct {
+					ID             bson.ObjectId `bson:"_id,omitempty"`
+					Jobname        string
+					Buildnumber    int
+					Result         string
+					Host           string
+					Duration       float64
+					Start          string
+					Gerritreceived string
+					Timediff       float64
+				}{
+					Jobname:        s_ele[0],
+					Buildnumber:    i_buildnumber,
+					Result:         s_ele[2],
+					Host:           s_ele[3],
+					Duration:       i_duration,
+					Start:          s_ele[5],
+					Gerritreceived: s_ele[6],
+					Timediff:       i_timediff,
+				})
 			}
 			done <- 1
 		}(j)
