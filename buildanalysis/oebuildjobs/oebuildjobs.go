@@ -2,7 +2,6 @@ package oebuildjobs
 
 import "encoding/xml"
 import "fmt"
-import "time"
 
 type Account struct {
 	Name     string `xml:"name"`
