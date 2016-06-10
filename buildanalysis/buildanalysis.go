@@ -163,7 +163,9 @@ func main() {
 
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
-	fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
+	//fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
+
+	// Create goroutines that handle each build's log and build.xml files
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
 			session, err := mgo.Dial("156.147.69.55:27017")
@@ -188,11 +190,13 @@ func main() {
 			for buildJob := range buildjobs {
 				isExist := CheckBuildExistInDB(buildJob, coll)
 				if isExist {
-					log.Println("DUPLICATE: " + buildJob)
+					var _ = err
 				} else {
 					s := AnalyzeBuild(buildJob)
 					s_ele := strings.Split(s, ",")
 					i_jobname := s_ele[0]
+					arr := strings.Split(i_jobname, "-")
+					i_machine := arr[3]
 					i_buildnumber, _ := strconv.Atoi(s_ele[1])
 					i_buildsh, _ := strconv.ParseFloat(s_ele[2], 64)
 					i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
@@ -221,6 +225,7 @@ func main() {
 						Branch         string
 						Number         int
 						Url            string
+						Machine        string
 					}{
 						Jobname:        i_jobname,
 						Buildnumber:    i_buildnumber,
@@ -235,12 +240,17 @@ func main() {
 						Branch:         i_branch,
 						Number:         i_number,
 						Url:            i_url,
+						Machine:        i_machine,
 					})
 				}
 			}
 			done <- 1
 		}(j)
 	}
+
+	// Create a goroutine that find builds that has build.xml and log file,
+	// If they exist, that build's location is sent to 'listChannel'
+	// and other routines will handle it
 	go func() {
 		log.Println("Start: Getting build directories")
 		validInt := regexp.MustCompile(`^\d+$`)
@@ -260,6 +270,8 @@ func main() {
 		log.Println("END: Getting build directories")
 		close(buildjobs)
 	}()
+
+	// Check If all log analyzer routines are completed
 	for m := 0; m < *nThread; m++ {
 		<-done
 	}
