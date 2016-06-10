@@ -149,6 +149,12 @@ func main() {
 	jenkinsHome := flag.String("jenkinsHome", "/binary/build_results/jenkins_home_backup", "Jenkins configuration and data directory")
 	jobName := flag.String("jobName", "starfish-drd4tv-official-h15", "Set a job name to parse")
 	nThread := flag.Int("n", 4, "Number of threads")
+	dbHost := flag.String("dbHost", "", "DB Host")
+	dbPort := flag.String("dbPort", "", "DB Port")
+	dbName := flag.String("dbName", "", "DB Name")
+	dbColl := flag.String("dbColl", "", "DB Collection name")
+	dbUser := flag.String("dbUser", "", "DB Username")
+	dbPass := flag.String("dbPass", "", "DB Password")
 	flag.Parse()
 
 	log.Printf("Jenkins Home: %s", *jenkinsHome)
@@ -161,6 +167,7 @@ func main() {
 		log.Fatal(err)
 	}
 
+	dbUrl := fmt.Sprintf("%s:%s", *dbHost, *dbPort)
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
 	//fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
@@ -168,14 +175,14 @@ func main() {
 	// Create goroutines that handle each build's log and build.xml files
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
-			session, err := mgo.Dial("156.147.69.55:27017")
+			session, err := mgo.Dial(dbUrl)
 			if err != nil {
 				panic(err)
 			}
 			defer session.Close()
-			db := session.DB("git_api_server")
-			db.Login("log_manager", "Sanfrancisco")
-			coll := db.C("verifyjob")
+			db := session.DB(*dbName)
+			db.Login(*dbUser, *dbPass)
+			coll := db.C(*dbColl)
 			index := mgo.Index{
 				Key:        []string{"buildjob", "data"},
 				Unique:     true,
