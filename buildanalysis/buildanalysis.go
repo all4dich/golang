@@ -40,7 +40,8 @@ func CheckBuildExistInDB(buildDir string, coll *mgo.Collection) bool {
 		log.Println(err)
 		return true
 	}
-	if n == 1 {
+	if n != 0 {
+		log.Println("Log: Exist = ", buildDir)
 		return true
 	} else {
 		return false
