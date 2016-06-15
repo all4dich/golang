@@ -93,7 +93,7 @@ type GerritChangeInfo struct {
 	Url          string   `xml:"change>url"`
 	Changeid     string   `xml:"change>id"`
 	Patchset     PatchSet `xml:"patchSet"`
-	ReceivedOn   int64    `xml:"receivedOn"`
+	ReceivedOn   int      `xml:"receivedOn"`
 }
 
 type VerifyBuild struct {

@@ -263,7 +263,7 @@ func main() {
 					//i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
 					i_duration := v.Duration / 1000
 					//i_start, _ := strconv.ParseFloat(s_ele[6], 64)
-					i_start := v.Start
+					i_start := v.Start / 1000
 					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
 					i_project := s_ele[9]
 					i_branch := s_ele[10]
