@@ -83,7 +83,16 @@ func ParseMeta(params ...string) (paramData []string) {
 	return paramData
 }
 
-func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild) {
+func GetFloat(i string, buildnumber int) float64 {
+	r, err := strconv.ParseFloat(i, 64)
+	if err != nil {
+		//log.Println(err, "Don't find a value for ", buildnumber)
+		return 0.0
+	}
+	return r
+}
+
+func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild, b map[string]string) {
 	start := time.Now()
 	var _ = start
 	buildLogFile := buildDir + "/log"
@@ -122,6 +131,20 @@ func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild) {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
+			if r_length > 14 && r[0] == "TIME:" && r[12] == "rm" && r[13] == "-rf" {
+				lastEle := strings.Split(r[14], "/")
+				n := len(lastEle)
+				if lastEle[n-1] == "BUILD" {
+					buildInfo["time_rm_BUILD"] = r[2]
+				} else if lastEle[n-1] == "BUILD-ARTIFACTS" {
+					buildInfo["time_rm_BUILD_ARTIFACTS"] = r[2]
+				} else if lastEle[n-1] == "downloads" {
+					buildInfo["time_rm_downloads"] = r[2]
+				} else if lastEle[n-1] == "sstate-cache" {
+					buildInfo["time_rm_sstate"] = r[2]
+				}
+				continue
+			}
 			//if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
@@ -145,28 +168,34 @@ func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild) {
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
 	s = fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity)
 	v = xmlEntity
-	return s, v
+	b = buildInfo
+	return s, v, b
 	//return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity), xmlEntity
 }
 
 type BuildData struct {
-	ID               bson.ObjectId `bson:"_id,omitempty"`
-	Jobname          string
-	Buildnumber      int
-	Result           string
-	Host             string
-	Duration         int64
-	Start            int64
-	Gerritreceived   float64
-	Timediff         float64
-	Build_sh         float64
-	Project          string
-	Branch           string
-	Number           int
-	Url              string
-	Machine          string
-	GerritChangeInfo bson.M
-	GitChangeInfo    bson.M
+	ID                      bson.ObjectId `bson:"_id,omitempty"`
+	Jobname                 string
+	Buildnumber             int
+	Result                  string
+	Host                    string
+	Duration                int
+	Start                   int
+	Workspace               string
+	Timediff                float64
+	Project                 string
+	Branch                  string
+	Number                  int
+	Url                     string
+	Machine                 string
+	GerritChangeInfo        bson.M
+	GitChangeInfo           bson.M
+	Time_build_sh           float64
+	Time_rm_BUILD           float64
+	Time_rm_BUILD_ARTIFACTS float64
+	Time_rm_downloads       float64
+	Time_rm_sstate          float64
+	Time_rsync_artifacts    float64
 }
 
 func main() {
@@ -223,20 +252,18 @@ func main() {
 				if isExist {
 					var _ = err
 				} else {
-					s, v := AnalyzeBuild(buildJob)
+					s, v, b := AnalyzeBuild(buildJob)
 					var _ = v
-					//log.Println(s)
+					var _ = b
 					s_ele := strings.Split(s, ",")
 					i_jobname := s_ele[0]
 					arr := strings.Split(i_jobname, "-")
 					i_machine := arr[3]
 					i_buildnumber, _ := strconv.Atoi(s_ele[1])
-					i_buildsh, _ := strconv.ParseFloat(s_ele[2], 64)
 					//i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
 					i_duration := v.Duration / 1000
 					//i_start, _ := strconv.ParseFloat(s_ele[6], 64)
 					i_start := v.Start
-					i_received, _ := strconv.ParseFloat(s_ele[7], 64)
 					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
 					i_project := s_ele[9]
 					i_branch := s_ele[10]
@@ -246,20 +273,19 @@ func main() {
 						bson.M{"buildnumber": i_buildnumber},
 					}})
 					coll.Insert(&BuildData{
-						Jobname:        i_jobname,
-						Buildnumber:    i_buildnumber,
-						Result:         v.Result,
-						Host:           v.Host,
-						Duration:       i_duration,
-						Start:          i_start,
-						Gerritreceived: i_received,
-						Timediff:       i_timediff,
-						Build_sh:       i_buildsh,
-						Project:        i_project,
-						Branch:         i_branch,
-						Number:         i_number,
-						Url:            i_url,
-						Machine:        i_machine,
+						Jobname:     i_jobname,
+						Buildnumber: i_buildnumber,
+						Result:      v.Result,
+						Host:        v.Host,
+						Duration:    i_duration,
+						Start:       i_start,
+						Workspace:   v.Workspace,
+						Timediff:    i_timediff,
+						Project:     i_project,
+						Branch:      i_branch,
+						Number:      i_number,
+						Url:         i_url,
+						Machine:     i_machine,
 						GerritChangeInfo: bson.M{
 							"project":      v.GerritChangeInfo.Project,
 							"branch":       v.GerritChangeInfo.Branch,
@@ -288,6 +314,12 @@ func main() {
 							"buildnumber":   v.GitChangeInfo.Buildnumber,
 							"repositoryurl": v.GitChangeInfo.Repositoryurl,
 						},
+						Time_build_sh:           GetFloat(b["time_build_sh"], i_buildnumber),
+						Time_rm_BUILD:           GetFloat(b["time_rm_BUILD"], i_buildnumber),
+						Time_rm_BUILD_ARTIFACTS: GetFloat(b["time_rm_BUILD_ARTIFACTS"], i_buildnumber),
+						Time_rm_downloads:       GetFloat(b["time_rm_downloads"], i_buildnumber),
+						Time_rm_sstate:          GetFloat(b["time_rm_sstate"], i_buildnumber),
+						Time_rsync_artifacts:    GetFloat(b["time_rsync_artifacts"], i_buildnumber),
 					})
 				}
 			}

@@ -79,10 +79,10 @@ type EachParameter struct {
 
 type commonBuildAttr struct {
 	Description string `xml:"description"`
-	Duration    int64  `xml:"duration"`
+	Duration    int    `xml:"duration"`
 	Host        string `xml:"builtOn"`
 	Result      string `xml:"result"`
-	Start       int64  `xml:"startTime"`
+	Start       int    `xml:"startTime"`
 	Workspace   string `xml:"workspace"`
 }
 
