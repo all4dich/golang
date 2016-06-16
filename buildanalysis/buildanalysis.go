@@ -184,10 +184,6 @@ type BuildData struct {
 	Workspace               string
 	Description             string
 	Timediff                float64
-	Project                 string
-	Branch                  string
-	Number                  int
-	Url                     string
 	Machine                 string
 	GerritChangeInfo        bson.M
 	GitChangeInfo           bson.M
@@ -267,10 +263,6 @@ func main() {
 					//i_start, _ := strconv.ParseFloat(s_ele[6], 64)
 					i_start := v.Start / 1000
 					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
-					i_project := s_ele[9]
-					i_branch := s_ele[10]
-					i_number, _ := strconv.Atoi(s_ele[11])
-					i_url := s_ele[12]
 					coll.Remove(bson.M{"jobname": s_ele[0], "$and": []interface{}{
 						bson.M{"buildnumber": i_buildnumber},
 					}})
@@ -284,10 +276,6 @@ func main() {
 						Workspace:   v.Workspace,
 						Description: v.Description,
 						Timediff:    i_timediff,
-						Project:     i_project,
-						Branch:      i_branch,
-						Number:      i_number,
-						Url:         i_url,
 						Machine:     i_machine,
 						Cause: bson.M{
 							"parent_project":     v.Causes.Parent_project,
