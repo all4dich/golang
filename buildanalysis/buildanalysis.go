@@ -197,6 +197,7 @@ type BuildData struct {
 	Time_rm_downloads       float64
 	Time_rm_sstate          float64
 	Time_rsync_artifacts    float64
+	Cause                   bson.M
 }
 
 func main() {
@@ -288,6 +289,13 @@ func main() {
 						Number:      i_number,
 						Url:         i_url,
 						Machine:     i_machine,
+						Cause: bson.M{
+							"parent_project":     v.Causes.Parent_project,
+							"parent_user":        v.Causes.Parent_user,
+							"parent_buildnumber": v.Causes.Parent_buildnumber,
+							"parent_url":         v.Causes.Parent_url,
+							"userid":             v.Causes.Userid,
+						},
 						GerritChangeInfo: bson.M{
 							"project":      v.GerritChangeInfo.Project,
 							"branch":       v.GerritChangeInfo.Branch,

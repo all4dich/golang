@@ -96,6 +96,14 @@ type GerritChangeInfo struct {
 	ReceivedOn   int      `xml:"receivedOn"`
 }
 
+type Cause struct {
+	Parent_project     string `xml:"hudson.model.Cause_-UpstreamCause>upstreamProject"`
+	Parent_user        string `xml:"hudson.model.Cause_-UpstreamCause>upstreamCauses>hudson.model.Cause_-UserIdCause>userId"`
+	Parent_buildnumber int    `xml:"hudson.model.Cause_-UpstreamCause>upstreamBuild"`
+	Parent_url         string `xml:"hudson.model.Cause_-UpstreamCause>upstreamUrl"`
+	Userid             string `xml:"hudson.model.Cause_-UserIdCause>userId"`
+}
+
 type VerifyBuild struct {
 	XMLName xml.Name `xml:"build"`
 	xmlroot string   "actions"
@@ -104,6 +112,8 @@ type VerifyBuild struct {
 	GitChangeInfo    GitChangeInfo    `xml:"actions>hudson.plugins.git.util.BuildData"`
 	RetriggerInfo    RetriggerEvent   `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
 	Parameters       []EachParameter  `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
+	//Parent_project   string           `xml:"actions>hudson.model.CauseAction>causes>hudson.model.Cause_-UpstreamCause>upstreamProject"`
+	Causes Cause `xml:"actions>hudson.model.CauseAction>causes"`
 }
 
 type CauseAction struct {
