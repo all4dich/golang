@@ -102,6 +102,7 @@ type Cause struct {
 	Parent_buildnumber int    `xml:"hudson.model.Cause_-UpstreamCause>upstreamBuild"`
 	Parent_url         string `xml:"hudson.model.Cause_-UpstreamCause>upstreamUrl"`
 	Userid             string `xml:"hudson.model.Cause_-UserIdCause>userId"`
+	Retriggeredby      string `xml:"com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.GerritUserCause>authenticationName"`
 }
 
 type VerifyBuild struct {

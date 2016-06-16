@@ -283,6 +283,7 @@ func main() {
 							"parent_buildnumber": v.Causes.Parent_buildnumber,
 							"parent_url":         v.Causes.Parent_url,
 							"userid":             v.Causes.Userid,
+							"retriggeredby":      v.Causes.Retriggeredby,
 						},
 						GerritChangeInfo: bson.M{
 							"project":      v.GerritChangeInfo.Project,
