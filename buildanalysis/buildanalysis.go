@@ -182,6 +182,7 @@ type BuildData struct {
 	Duration                int
 	Start                   int
 	Workspace               string
+	Description             string
 	Timediff                float64
 	Project                 string
 	Branch                  string
@@ -280,6 +281,7 @@ func main() {
 						Duration:    i_duration,
 						Start:       i_start,
 						Workspace:   v.Workspace,
+						Description: v.Description,
 						Timediff:    i_timediff,
 						Project:     i_project,
 						Branch:      i_branch,
