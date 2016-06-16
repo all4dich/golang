@@ -194,6 +194,7 @@ type BuildData struct {
 	Time_rm_sstate          float64
 	Time_rsync_artifacts    float64
 	Cause                   bson.M
+	Parameters              bson.M
 }
 
 func main() {
@@ -266,6 +267,10 @@ func main() {
 					coll.Remove(bson.M{"jobname": s_ele[0], "$and": []interface{}{
 						bson.M{"buildnumber": i_buildnumber},
 					}})
+					i_parameters := bson.M{}
+					for _, eachParameter := range v.Parameters {
+						i_parameters[eachParameter.Name] = eachParameter.Value
+					}
 					coll.Insert(&BuildData{
 						Jobname:     i_jobname,
 						Buildnumber: i_buildnumber,
@@ -277,6 +282,7 @@ func main() {
 						Description: v.Description,
 						Timediff:    i_timediff,
 						Machine:     i_machine,
+						Parameters:  i_parameters,
 						Cause: bson.M{
 							"parent_project":     v.Causes.Parent_project,
 							"parent_user":        v.Causes.Parent_user,
