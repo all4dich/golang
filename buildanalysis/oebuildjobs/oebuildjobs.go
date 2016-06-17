@@ -105,7 +105,7 @@ type Cause struct {
 	Retriggeredby      string `xml:"com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.GerritUserCause>authenticationName"`
 }
 
-type VerifyBuild struct {
+type BuildInfo struct {
 	XMLName xml.Name `xml:"build"`
 	xmlroot string   "actions"
 	commonBuildAttr
@@ -140,7 +140,7 @@ type OfficialBuild struct {
 	GitChangeInfo GitChangeInfo `xml:"actions>hudson.plugins.git.util.BuildData"`
 }
 
-func (v VerifyBuild) String() string {
+func (v BuildInfo) String() string {
 	duration := float64(v.Duration) / 1000
 	startTime := float64(v.Start / 1000)
 	gerritReceived := float64(v.GerritChangeInfo.ReceivedOn / 1000)

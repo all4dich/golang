@@ -90,7 +90,7 @@ func GetFloat(i string, buildnumber int) float64 {
 	return r
 }
 
-func AnalyzeBuild(buildDir string) (v oebuildjobs.VerifyBuild, b map[string]string) {
+func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string) {
 	start := time.Now()
 	var _ = start
 	buildLogFile := buildDir + "/log"
@@ -152,7 +152,7 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.VerifyBuild, b map[string]stri
 		}
 	}
 	var _ = xml.Header
-	var _ = oebuildjobs.VerifyBuild{}
+	var _ = oebuildjobs.BuildInfo{}
 	var _ = buildXmlFile
 	buildXml, err := os.Open(buildXmlFile)
 	if err != nil {
@@ -163,7 +163,7 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.VerifyBuild, b map[string]stri
 	if err != nil {
 		log.Fatal("ERROR: Cannot read data from a xml file ")
 	}
-	xmlEntity := oebuildjobs.VerifyBuild{}
+	xmlEntity := oebuildjobs.BuildInfo{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
 	v = xmlEntity
 	b = buildInfo

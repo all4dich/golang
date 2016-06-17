@@ -20,7 +20,7 @@ func getTagInfo(content []byte) (tag, value string) {
 }
 
 func ExampleVerifyBuildXml() {
-	v := VerifyBuild{}
+	v := BuildInfo{}
 	//file, err := os.Open("/Users/sunjoo/temp/jenkins_home/jobs/starfish-drd4tv-verify-h15/builds/10001/build.xml")
 	file, err := os.Open("build.xml")
 	if err != nil {
