@@ -32,7 +32,6 @@ func CheckBuildExistInDB(buildDir string, coll *mgo.Collection) bool {
 	buildEle := strings.Split(buildDir, "/")
 	buildJobName := buildEle[len(buildEle)-3]
 	buildNumber, _ := strconv.Atoi(buildEle[len(buildEle)-1])
-	//n, err := coll.Find(bson.M{"jobname": buildJobName}).Select(bson.M{"buildnumber": buildNumber}).Count()
 	n, err := coll.Find(bson.M{"jobname": buildJobName, "$and": []interface{}{
 		bson.M{"buildnumber": buildNumber},
 	}}).Count()
@@ -86,13 +85,12 @@ func ParseMeta(params ...string) (paramData []string) {
 func GetFloat(i string, buildnumber int) float64 {
 	r, err := strconv.ParseFloat(i, 64)
 	if err != nil {
-		//log.Println(err, "Don't find a value for ", buildnumber)
 		return 0.0
 	}
 	return r
 }
 
-func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild, b map[string]string) {
+func AnalyzeBuild(buildDir string) (v oebuildjobs.VerifyBuild, b map[string]string) {
 	start := time.Now()
 	var _ = start
 	buildLogFile := buildDir + "/log"
@@ -101,6 +99,8 @@ func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild, b map[s
 	buildJobName := buildEle[len(buildEle)-3]
 	buildNumber := buildEle[len(buildEle)-1]
 	buildInfo := make(map[string]string)
+	buildInfo["jobname"] = buildJobName
+	buildInfo["buildnumber"] = buildNumber
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
 		buildLogReader := bufio.NewReader(buildLog)
@@ -145,7 +145,6 @@ func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild, b map[s
 				}
 				continue
 			}
-			//if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
 				continue
@@ -166,11 +165,9 @@ func AnalyzeBuild(buildDir string) (s string, v oebuildjobs.VerifyBuild, b map[s
 	}
 	xmlEntity := oebuildjobs.VerifyBuild{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	s = fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity)
 	v = xmlEntity
 	b = buildInfo
-	return s, v, b
-	//return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity), xmlEntity
+	return v, b
 }
 
 type BuildData struct {
@@ -183,7 +180,7 @@ type BuildData struct {
 	Start                   int
 	Workspace               string
 	Description             string
-	Timediff                float64
+	Timediff                int
 	Machine                 string
 	GerritChangeInfo        bson.M
 	GitChangeInfo           bson.M
@@ -222,7 +219,6 @@ func main() {
 	dbUrl := fmt.Sprintf("%s:%s", *dbHost, *dbPort)
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
-	//fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
 
 	// Create goroutines that handle each build's log and build.xml files
 	for j := 0; j < *nThread; j++ {
@@ -251,20 +247,18 @@ func main() {
 				if isExist {
 					var _ = err
 				} else {
-					s, v, b := AnalyzeBuild(buildJob)
-					var _ = v
-					var _ = b
-					s_ele := strings.Split(s, ",")
-					i_jobname := s_ele[0]
+					v, b := AnalyzeBuild(buildJob)
+					i_jobname := b["jobname"]
 					arr := strings.Split(i_jobname, "-")
 					i_machine := arr[3]
-					i_buildnumber, _ := strconv.Atoi(s_ele[1])
-					//i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
+					i_buildnumber, _ := strconv.Atoi(b["buildnumber"])
 					i_duration := v.Duration / 1000
-					//i_start, _ := strconv.ParseFloat(s_ele[6], 64)
 					i_start := v.Start / 1000
-					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
-					coll.Remove(bson.M{"jobname": s_ele[0], "$and": []interface{}{
+					i_timediff := 0
+					if v.GerritChangeInfo.ReceivedOn != 0 {
+						i_timediff = i_start - (v.GerritChangeInfo.ReceivedOn / 1000)
+					}
+					coll.Remove(bson.M{"jobname": i_jobname, "$and": []interface{}{
 						bson.M{"buildnumber": i_buildnumber},
 					}})
 					i_parameters := bson.M{}
