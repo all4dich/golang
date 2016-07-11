@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/all4dich/golang/buildanalysis/builddata"
 	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 )
 
@@ -170,30 +171,6 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 	return v, b
 }
 
-type BuildData struct {
-	ID                      bson.ObjectId `bson:"_id,omitempty"`
-	Jobname                 string
-	Buildnumber             int
-	Result                  string
-	Host                    string
-	Duration                int
-	Start                   int
-	Workspace               string
-	Description             string
-	Timediff                int
-	Machine                 string
-	GerritChangeInfo        bson.M
-	GitChangeInfo           bson.M
-	Time_build_sh           float64
-	Time_rm_BUILD           float64
-	Time_rm_BUILD_ARTIFACTS float64
-	Time_rm_downloads       float64
-	Time_rm_sstate          float64
-	Time_rsync_artifacts    float64
-	Cause                   bson.M
-	Parameters              bson.M
-}
-
 func main() {
 	jenkinsHome := flag.String("jenkinsHome", "/binary/build_results/jenkins_home_backup", "Jenkins configuration and data directory")
 	jobName := flag.String("jobName", "starfish-drd4tv-official-h15", "Set a job name to parse")
@@ -265,7 +242,7 @@ func main() {
 					for _, eachParameter := range v.Parameters {
 						i_parameters[eachParameter.Name] = eachParameter.Value
 					}
-					coll.Insert(&BuildData{
+					coll.Insert(&builddata.BuildData{
 						Jobname:     i_jobname,
 						Buildnumber: i_buildnumber,
 						Result:      v.Result,
