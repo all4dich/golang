@@ -242,6 +242,9 @@ func main() {
 					for _, eachParameter := range v.Parameters {
 						i_parameters[eachParameter.Name] = eachParameter.Value
 					}
+					i_parameters["DISTRO_VERSION"] = strings.Replace(b["DISTRO_VERSION"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_MANUFACTURING_VERSION"] = strings.Replace(b["WEBOS_DISTRO_MANUFACTURING_VERSION"], "\"", "", -1)
+
 					coll.Insert(&builddata.BuildData{
 						Jobname:     i_jobname,
 						Buildnumber: i_buildnumber,
