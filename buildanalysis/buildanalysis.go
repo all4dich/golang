@@ -122,6 +122,14 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 			if _, ok := keyMap[eachLineSplit[0]]; ok {
 				if r_length == 3 {
 					buildInfo[r[0]] = r[2]
+				} else if r[0] == "TUNE_FEATURES" { //For 'TUNE_FEATURES' fields
+					temp_str := ""
+					for _, v := range eachLineSplit {
+						if v != "" && v != "=" && v != "TUNE_FEATURES" {
+							temp_str = temp_str + " " + v
+						}
+					}
+					buildInfo[r[0]] = temp_str
 				}
 			}
 			if r_length > 5 && r[0] == "NOTE:" && r[1] == "do_populate_lic:" && r[3] == "sstate" && r[4] == "reuse" {
@@ -242,8 +250,20 @@ func main() {
 					for _, eachParameter := range v.Parameters {
 						i_parameters[eachParameter.Name] = eachParameter.Value
 					}
+					i_parameters["BB_VERSION"] = strings.Replace(b["BB_VERSION"], "\"", "", -1)
+					i_parameters["BUILD_SYS"] = strings.Replace(b["BUILD_SYS"], "\"", "", -1)
+					i_parameters["NATIVELSBSTRING"] = strings.Replace(b["NATIVELSBSTRING"], "\"", "", -1)
+					i_parameters["TARGET_SYS"] = strings.Replace(b["TARGET_SYS"], "\"", "", -1)
+					i_parameters["DISTRO"] = strings.Replace(b["DISTRO"], "\"", "", -1)
 					i_parameters["DISTRO_VERSION"] = strings.Replace(b["DISTRO_VERSION"], "\"", "", -1)
+					i_parameters["TUNE_FEATURES"] = strings.Replace(b["TUNE_FEATURES"], "\"", "", -1)
+					i_parameters["TARGET_FPU"] = strings.Replace(b["TARGET_FPU"], "\"", "", -1)
 					i_parameters["WEBOS_DISTRO_MANUFACTURING_VERSION"] = strings.Replace(b["WEBOS_DISTRO_MANUFACTURING_VERSION"], "\"", "", -1)
+					i_parameters["WEBOS_ENCRYPTION_KEY_TYPE"] = strings.Replace(b["WEBOS_ENCRYPTION_KEY_TYPE"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_RELEASE_CODENAME"] = strings.Replace(b["WEBOS_DISTRO_RELEASE_CODENAME"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_BUILD_ID"] = strings.Replace(b["WEBOS_DISTRO_BUILD_ID"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_TOPDIR_REVISION"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_REVISION"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_TOPDIR_DESCRIBE"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_DESCRIBE"], "\"", "", -1)
 
 					coll.Insert(&builddata.BuildData{
 						Jobname:     i_jobname,
