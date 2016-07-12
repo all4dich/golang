@@ -136,6 +136,10 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 				buildInfo["num_of_from_scratch"] = eachLineSplit[7]
 				continue
 			}
+			if eachLineSplit[0] == "NOTE:" && eachLineSplit[1] == "Your" && eachLineSplit[2] == "entry" {
+				buildInfo["caprica"] = eachLineSplit[7]
+				continue
+			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && r[17] == "BUILD-ARTIFACTS/build_changes.log" {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
@@ -264,6 +268,7 @@ func main() {
 					i_parameters["WEBOS_DISTRO_BUILD_ID"] = strings.Replace(b["WEBOS_DISTRO_BUILD_ID"], "\"", "", -1)
 					i_parameters["WEBOS_DISTRO_TOPDIR_REVISION"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_REVISION"], "\"", "", -1)
 					i_parameters["WEBOS_DISTRO_TOPDIR_DESCRIBE"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_DESCRIBE"], "\"", "", -1)
+					i_parameters["caprica"] = b["caprica"]
 
 					coll.Insert(&builddata.BuildData{
 						Jobname:     i_jobname,
