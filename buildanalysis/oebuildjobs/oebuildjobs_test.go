@@ -20,7 +20,7 @@ func getTagInfo(content []byte) (tag, value string) {
 }
 
 func ExampleVerifyBuildXml() {
-	v := VerifyBuild{}
+	v := BuildInfo{}
 	//file, err := os.Open("/Users/sunjoo/temp/jenkins_home/jobs/starfish-drd4tv-verify-h15/builds/10001/build.xml")
 	file, err := os.Open("build.xml")
 	if err != nil {
@@ -36,12 +36,10 @@ func ExampleVerifyBuildXml() {
 	err = xml.Unmarshal(dat, &v)
 	var _ = err
 	fmt.Println(string(v.Result))
-	fmt.Println(string(v.BuildEvent.Provider.Host))
-	fmt.Println(v.BuildEvent.GerritChange.Number)
-	fmt.Println(v.BuildEvent.GerritChange.Id)
+	fmt.Println(v.GerritChangeInfo.Changenumber)
+	fmt.Println(v.GerritChangeInfo.Changeid)
 	// Output:
 	// SUCCESS
-	// wall.lge.com
 	// 97589
 	// I693e80759e98f7ac1a57c78a41cc7e4ae2fb78c7
 }
@@ -65,9 +63,9 @@ func ExampleOfficialBuild() {
 	_, c := getTagInfo(content)
 	fmt.Println(c)
 	fmt.Println(tagname.Local)
-	fmt.Println(v.GitBuildData.BranchName)
-	fmt.Println(v.GitBuildData.BuildNumber)
-	fmt.Println(v.GitBuildData.CommitSha1)
+	fmt.Println(v.GitChangeInfo.Branch)
+	fmt.Println(v.GitChangeInfo.Buildnumber)
+	fmt.Println(v.GitChangeInfo.Commithash)
 	fmt.Println(v.Workspace)
 	// Output:
 	// 127.0.0.1

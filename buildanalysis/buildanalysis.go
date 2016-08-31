@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/all4dich/golang/buildanalysis/builddata"
 	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 )
 
@@ -32,7 +33,6 @@ func CheckBuildExistInDB(buildDir string, coll *mgo.Collection) bool {
 	buildEle := strings.Split(buildDir, "/")
 	buildJobName := buildEle[len(buildEle)-3]
 	buildNumber, _ := strconv.Atoi(buildEle[len(buildEle)-1])
-	//n, err := coll.Find(bson.M{"jobname": buildJobName}).Select(bson.M{"buildnumber": buildNumber}).Count()
 	n, err := coll.Find(bson.M{"jobname": buildJobName, "$and": []interface{}{
 		bson.M{"buildnumber": buildNumber},
 	}}).Count()
@@ -40,7 +40,8 @@ func CheckBuildExistInDB(buildDir string, coll *mgo.Collection) bool {
 		log.Println(err)
 		return true
 	}
-	if n == 1 {
+	if n != 0 {
+		log.Println("Log: Exist = ", buildDir)
 		return true
 	} else {
 		return false
@@ -82,7 +83,15 @@ func ParseMeta(params ...string) (paramData []string) {
 	return paramData
 }
 
-func AnalyzeBuild(buildDir string) string {
+func GetFloat(i string, buildnumber int) float64 {
+	r, err := strconv.ParseFloat(i, 64)
+	if err != nil {
+		return 0.0
+	}
+	return r
+}
+
+func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string) {
 	start := time.Now()
 	var _ = start
 	buildLogFile := buildDir + "/log"
@@ -91,6 +100,8 @@ func AnalyzeBuild(buildDir string) string {
 	buildJobName := buildEle[len(buildEle)-3]
 	buildNumber := buildEle[len(buildEle)-1]
 	buildInfo := make(map[string]string)
+	buildInfo["jobname"] = buildJobName
+	buildInfo["buildnumber"] = buildNumber
 	buildLog, err := os.Open(buildLogFile)
 	if err == nil {
 		buildLogReader := bufio.NewReader(buildLog)
@@ -111,17 +122,42 @@ func AnalyzeBuild(buildDir string) string {
 			if _, ok := keyMap[eachLineSplit[0]]; ok {
 				if r_length == 3 {
 					buildInfo[r[0]] = r[2]
+				} else if r[0] == "TUNE_FEATURES" { //For 'TUNE_FEATURES' fields
+					temp_str := ""
+					for _, v := range eachLineSplit {
+						if v != "" && v != "=" && v != "TUNE_FEATURES" {
+							temp_str = temp_str + " " + v
+						}
+					}
+					buildInfo[r[0]] = temp_str
 				}
 			}
 			if r_length > 5 && r[0] == "NOTE:" && r[1] == "do_populate_lic:" && r[3] == "sstate" && r[4] == "reuse" {
 				buildInfo["num_of_from_scratch"] = eachLineSplit[7]
 				continue
 			}
+			if eachLineSplit[0] == "NOTE:" && eachLineSplit[1] == "Your" && eachLineSplit[2] == "entry" {
+				buildInfo["caprica"] = eachLineSplit[7]
+				continue
+			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && r[17] == "BUILD-ARTIFACTS/build_changes.log" {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
-			//if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" && r[17] == "--targets='" {
+			if r_length > 14 && r[0] == "TIME:" && r[12] == "rm" && r[13] == "-rf" {
+				lastEle := strings.Split(r[14], "/")
+				n := len(lastEle)
+				if lastEle[n-1] == "BUILD" {
+					buildInfo["time_rm_BUILD"] = r[2]
+				} else if lastEle[n-1] == "BUILD-ARTIFACTS" {
+					buildInfo["time_rm_BUILD_ARTIFACTS"] = r[2]
+				} else if lastEle[n-1] == "downloads" {
+					buildInfo["time_rm_downloads"] = r[2]
+				} else if lastEle[n-1] == "sstate-cache" {
+					buildInfo["time_rm_sstate"] = r[2]
+				}
+				continue
+			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
 				continue
@@ -129,7 +165,7 @@ func AnalyzeBuild(buildDir string) string {
 		}
 	}
 	var _ = xml.Header
-	var _ = oebuildjobs.VerifyBuild{}
+	var _ = oebuildjobs.BuildInfo{}
 	var _ = buildXmlFile
 	buildXml, err := os.Open(buildXmlFile)
 	if err != nil {
@@ -140,15 +176,23 @@ func AnalyzeBuild(buildDir string) string {
 	if err != nil {
 		log.Fatal("ERROR: Cannot read data from a xml file ")
 	}
-	xmlEntity := oebuildjobs.VerifyBuild{}
+	xmlEntity := oebuildjobs.BuildInfo{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
-	return fmt.Sprintf("%s,%s,%s,%s", buildJobName, buildNumber, buildInfo["time_build_sh"], xmlEntity)
+	v = xmlEntity
+	b = buildInfo
+	return v, b
 }
 
 func main() {
 	jenkinsHome := flag.String("jenkinsHome", "/binary/build_results/jenkins_home_backup", "Jenkins configuration and data directory")
 	jobName := flag.String("jobName", "starfish-drd4tv-official-h15", "Set a job name to parse")
 	nThread := flag.Int("n", 4, "Number of threads")
+	dbHost := flag.String("dbHost", "", "DB Host")
+	dbPort := flag.String("dbPort", "", "DB Port")
+	dbName := flag.String("dbName", "", "DB Name")
+	dbColl := flag.String("dbColl", "", "DB Collection name")
+	dbUser := flag.String("dbUser", "", "DB Username")
+	dbPass := flag.String("dbPass", "", "DB Password")
 	flag.Parse()
 
 	log.Printf("Jenkins Home: %s", *jenkinsHome)
@@ -161,21 +205,21 @@ func main() {
 		log.Fatal(err)
 	}
 
+	dbUrl := fmt.Sprintf("%s:%s", *dbHost, *dbPort)
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
-	//fmt.Println("Job Name, Build Number, Result, Host, Duration, Start, Gerrit Received, Time Diff")
 
 	// Create goroutines that handle each build's log and build.xml files
 	for j := 0; j < *nThread; j++ {
 		go func(j int) {
-			session, err := mgo.Dial("156.147.69.55:27017")
+			session, err := mgo.Dial(dbUrl)
 			if err != nil {
 				panic(err)
 			}
 			defer session.Close()
-			db := session.DB("git_api_server")
-			db.Login("log_manager", "Sanfrancisco")
-			coll := db.C("verifyjob")
+			db := session.DB(*dbName)
+			db.Login(*dbUser, *dbPass)
+			coll := db.C(*dbColl)
 			index := mgo.Index{
 				Key:        []string{"buildjob", "data"},
 				Unique:     true,
@@ -192,55 +236,94 @@ func main() {
 				if isExist {
 					var _ = err
 				} else {
-					s := AnalyzeBuild(buildJob)
-					s_ele := strings.Split(s, ",")
-					i_jobname := s_ele[0]
+					v, b := AnalyzeBuild(buildJob)
+					i_jobname := b["jobname"]
 					arr := strings.Split(i_jobname, "-")
 					i_machine := arr[3]
-					i_buildnumber, _ := strconv.Atoi(s_ele[1])
-					i_buildsh, _ := strconv.ParseFloat(s_ele[2], 64)
-					i_duration, _ := strconv.ParseFloat(s_ele[5], 64)
-					i_start, _ := strconv.ParseFloat(s_ele[6], 64)
-					i_received, _ := strconv.ParseFloat(s_ele[7], 64)
-					i_timediff, _ := strconv.ParseFloat(s_ele[8], 64)
-					i_project := s_ele[9]
-					i_branch := s_ele[10]
-					i_number, _ := strconv.Atoi(s_ele[11])
-					i_url := s_ele[12]
-					coll.Remove(bson.M{"jobname": s_ele[0], "$and": []interface{}{
+					i_buildnumber, _ := strconv.Atoi(b["buildnumber"])
+					i_duration := v.Duration / 1000
+					i_start := v.Start / 1000
+					i_timediff := 0
+					if v.GerritChangeInfo.ReceivedOn != 0 {
+						i_timediff = i_start - (v.GerritChangeInfo.ReceivedOn / 1000)
+					}
+					coll.Remove(bson.M{"jobname": i_jobname, "$and": []interface{}{
 						bson.M{"buildnumber": i_buildnumber},
 					}})
-					coll.Insert(&struct {
-						ID             bson.ObjectId `bson:"_id,omitempty"`
-						Jobname        string
-						Buildnumber    int
-						Result         string
-						Host           string
-						Duration       float64
-						Start          float64
-						Gerritreceived float64
-						Timediff       float64
-						Build_sh       float64
-						Project        string
-						Branch         string
-						Number         int
-						Url            string
-						Machine        string
-					}{
-						Jobname:        i_jobname,
-						Buildnumber:    i_buildnumber,
-						Result:         s_ele[3],
-						Host:           s_ele[4],
-						Duration:       i_duration,
-						Start:          i_start,
-						Gerritreceived: i_received,
-						Timediff:       i_timediff,
-						Build_sh:       i_buildsh,
-						Project:        i_project,
-						Branch:         i_branch,
-						Number:         i_number,
-						Url:            i_url,
-						Machine:        i_machine,
+					i_parameters := bson.M{}
+					for _, eachParameter := range v.Parameters {
+						i_parameters[eachParameter.Name] = eachParameter.Value
+					}
+					i_parameters["BB_VERSION"] = strings.Replace(b["BB_VERSION"], "\"", "", -1)
+					i_parameters["BUILD_SYS"] = strings.Replace(b["BUILD_SYS"], "\"", "", -1)
+					i_parameters["NATIVELSBSTRING"] = strings.Replace(b["NATIVELSBSTRING"], "\"", "", -1)
+					i_parameters["TARGET_SYS"] = strings.Replace(b["TARGET_SYS"], "\"", "", -1)
+					i_parameters["DISTRO"] = strings.Replace(b["DISTRO"], "\"", "", -1)
+					i_parameters["DISTRO_VERSION"] = strings.Replace(b["DISTRO_VERSION"], "\"", "", -1)
+					i_parameters["TUNE_FEATURES"] = strings.Replace(b["TUNE_FEATURES"], "\"", "", -1)
+					i_parameters["TARGET_FPU"] = strings.Replace(b["TARGET_FPU"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_MANUFACTURING_VERSION"] = strings.Replace(b["WEBOS_DISTRO_MANUFACTURING_VERSION"], "\"", "", -1)
+					i_parameters["WEBOS_ENCRYPTION_KEY_TYPE"] = strings.Replace(b["WEBOS_ENCRYPTION_KEY_TYPE"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_RELEASE_CODENAME"] = strings.Replace(b["WEBOS_DISTRO_RELEASE_CODENAME"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_BUILD_ID"] = strings.Replace(b["WEBOS_DISTRO_BUILD_ID"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_TOPDIR_REVISION"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_REVISION"], "\"", "", -1)
+					i_parameters["WEBOS_DISTRO_TOPDIR_DESCRIBE"] = strings.Replace(b["WEBOS_DISTRO_TOPDIR_DESCRIBE"], "\"", "", -1)
+					i_parameters["caprica"] = b["caprica"]
+
+					coll.Insert(&builddata.BuildData{
+						Jobname:     i_jobname,
+						Buildnumber: i_buildnumber,
+						Result:      v.Result,
+						Host:        v.Host,
+						Duration:    i_duration,
+						Start:       i_start,
+						Workspace:   v.Workspace,
+						Description: v.Description,
+						Timediff:    i_timediff,
+						Machine:     i_machine,
+						Parameters:  i_parameters,
+						Cause: bson.M{
+							"parent_project":     v.Causes.Parent_project,
+							"parent_user":        v.Causes.Parent_user,
+							"parent_buildnumber": v.Causes.Parent_buildnumber,
+							"parent_url":         v.Causes.Parent_url,
+							"userid":             v.Causes.Userid,
+							"retriggeredby":      v.Causes.Retriggeredby,
+						},
+						GerritChangeInfo: bson.M{
+							"project":      v.GerritChangeInfo.Project,
+							"branch":       v.GerritChangeInfo.Branch,
+							"changenumber": v.GerritChangeInfo.Changenumber,
+							"changeid":     v.GerritChangeInfo.Changeid,
+							"url":          v.GerritChangeInfo.Url,
+							"receivedon":   int(v.GerritChangeInfo.ReceivedOn / 1000),
+							"patchset": bson.M{
+								"number":    v.GerritChangeInfo.Patchset.Number,
+								"ref":       v.GerritChangeInfo.Patchset.Ref,
+								"parents":   v.GerritChangeInfo.Patchset.Parents,
+								"createdon": v.GerritChangeInfo.Patchset.CreatedOn,
+								"author": bson.M{
+									"name":  v.GerritChangeInfo.Patchset.Author.Name,
+									"email": v.GerritChangeInfo.Patchset.Author.Email,
+								},
+								"uploader": bson.M{
+									"name":  v.GerritChangeInfo.Patchset.Uploader.Name,
+									"email": v.GerritChangeInfo.Patchset.Uploader.Email,
+								},
+							},
+						},
+						GitChangeInfo: bson.M{
+							"branch":        v.GitChangeInfo.Branch,
+							"commithash":    v.GitChangeInfo.Commithash,
+							"buildnumber":   v.GitChangeInfo.Buildnumber,
+							"repositoryurl": v.GitChangeInfo.Repositoryurl,
+						},
+						Time_build_sh:           GetFloat(b["time_build_sh"], i_buildnumber),
+						Time_rm_BUILD:           GetFloat(b["time_rm_BUILD"], i_buildnumber),
+						Time_rm_BUILD_ARTIFACTS: GetFloat(b["time_rm_BUILD_ARTIFACTS"], i_buildnumber),
+						Time_rm_downloads:       GetFloat(b["time_rm_downloads"], i_buildnumber),
+						Time_rm_sstate:          GetFloat(b["time_rm_sstate"], i_buildnumber),
+						Time_rsync_artifacts:    GetFloat(b["time_rsync_artifacts"], i_buildnumber),
 					})
 				}
 			}

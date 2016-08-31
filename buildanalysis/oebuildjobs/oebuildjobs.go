@@ -35,7 +35,7 @@ type PatchSet struct {
 	Ref       string  `xml:"ref"`
 	Draft     bool    `xml:"draft"`
 	Uploader  Account `xml:"uploader"`
-	Author    Account `xml:"Author"`
+	Author    Account `xml:"author"`
 	Parents   string  `xml:"parents>string"`
 	CreatedOn string  `xml:"createdOn"`
 }
@@ -78,20 +78,43 @@ type EachParameter struct {
 }
 
 type commonBuildAttr struct {
-	StartTime   int64  `xml:"startTime"`
-	Duration    int64  `xml:"duration"`
-	Result      string `xml:"result"`
-	Host        string `xml:"builtOn"`
 	Description string `xml:"description"`
+	Duration    int    `xml:"duration"`
+	Host        string `xml:"builtOn"`
+	Result      string `xml:"result"`
+	Start       int    `xml:"startTime"`
 	Workspace   string `xml:"workspace"`
 }
 
-type VerifyBuild struct {
+type GerritChangeInfo struct {
+	Project      string   `xml:"change>project"`
+	Branch       string   `xml:"change>branch"`
+	Changenumber int      `xml:"change>number"`
+	Url          string   `xml:"change>url"`
+	Changeid     string   `xml:"change>id"`
+	Patchset     PatchSet `xml:"patchSet"`
+	ReceivedOn   int      `xml:"receivedOn"`
+}
+
+type Cause struct {
+	Parent_project     string `xml:"hudson.model.Cause_-UpstreamCause>upstreamProject"`
+	Parent_user        string `xml:"hudson.model.Cause_-UpstreamCause>upstreamCauses>hudson.model.Cause_-UserIdCause>userId"`
+	Parent_buildnumber int    `xml:"hudson.model.Cause_-UpstreamCause>upstreamBuild"`
+	Parent_url         string `xml:"hudson.model.Cause_-UpstreamCause>upstreamUrl"`
+	Userid             string `xml:"hudson.model.Cause_-UserIdCause>userId"`
+	Retriggeredby      string `xml:"com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.GerritUserCause>authenticationName"`
+}
+
+type BuildInfo struct {
 	XMLName xml.Name `xml:"build"`
+	xmlroot string   "actions"
 	commonBuildAttr
-	BuildEvent    TEvent          `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent"`
-	RetriggerInfo RetriggerEvent  `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
-	Parameters    []EachParameter `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
+	GerritChangeInfo GerritChangeInfo `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.BadgeAction>tEvent"`
+	GitChangeInfo    GitChangeInfo    `xml:"actions>hudson.plugins.git.util.BuildData"`
+	RetriggerInfo    RetriggerEvent   `xml:"actions>com.sonyericsson.hudson.plugins.gerrit.trigger.hudsontrigger.actions.RetriggerAction"`
+	Parameters       []EachParameter  `xml:"actions>hudson.model.ParametersAction>parameters>hudson.model.StringParameterValue"`
+	//Parent_project   string           `xml:"actions>hudson.model.CauseAction>causes>hudson.model.Cause_-UpstreamCause>upstreamProject"`
+	Causes Cause `xml:"actions>hudson.model.CauseAction>causes"`
 }
 
 type CauseAction struct {
@@ -103,28 +126,29 @@ type Causes struct {
 	Causes []CauseAction `xml:",any"`
 }
 
-type GitBuildData struct {
-	BranchName    string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>branches>hudson.plugins.git.Branch>name"`
-	CommitSha1    string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>sha1"`
-	BuildNumber   int    `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>hudsonBuildNumber"`
-	RepositoryUrl string `xml:"remoteUrls>string"`
+type GitChangeInfo struct {
+	Branch        string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>branches>hudson.plugins.git.Branch>name"`
+	Commithash    string `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>marked>sha1"`
+	Buildnumber   int    `xml:"buildsByBranchName>entry>hudson.plugins.git.util.Build>hudsonBuildNumber"`
+	Repositoryurl string `xml:"remoteUrls>string"`
 }
+
 type OfficialBuild struct {
 	XMLName xml.Name `xml:"build"`
 	commonBuildAttr
-	Causes       Causes       `xml:"actions>hudson.model.CauseAction>causes"`
-	GitBuildData GitBuildData `xml:"actions>hudson.plugins.git.util.BuildData"`
+	Causes        Causes        `xml:"actions>hudson.model.CauseAction>causes"`
+	GitChangeInfo GitChangeInfo `xml:"actions>hudson.plugins.git.util.BuildData"`
 }
 
-func (v VerifyBuild) String() string {
+func (v BuildInfo) String() string {
 	duration := float64(v.Duration) / 1000
-	startTime := float64(v.StartTime / 1000)
-	gerritReceived := float64(v.BuildEvent.ReceivedOn / 1000)
+	startTime := float64(v.Start / 1000)
+	gerritReceived := float64(v.GerritChangeInfo.ReceivedOn / 1000)
 	timeDiff := startTime - gerritReceived
 	// Result, buildOn, Duration, Start time, Gerrit received
 	return fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f,%s,%s,%d,%s", v.Result, v.Host, duration, startTime,
-		gerritReceived, timeDiff, v.BuildEvent.GerritChange.Project, v.BuildEvent.GerritChange.Branch,
-		v.BuildEvent.GerritChange.Number,
-		v.BuildEvent.GerritChange.Url,
+		gerritReceived, timeDiff, v.GerritChangeInfo.Project, v.GerritChangeInfo.Branch,
+		v.GerritChangeInfo.Changenumber,
+		v.GerritChangeInfo.Url,
 	)
 }
