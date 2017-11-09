@@ -236,6 +236,7 @@ func main() {
 				if isExist {
 					var _ = err
 				} else {
+					log.Println("INFO: Get information from ", buildJob)
 					v, b := AnalyzeBuild(buildJob)
 					i_jobname := b["jobname"]
 					arr := strings.Split(i_jobname, "-")
