@@ -231,10 +231,22 @@ func main() {
 			if err != nil {
 				panic(err)
 			}
+			latest_build := builddata.BuildData{}
+			latest_build_number := 0
+			err_latest_build := coll.Find(bson.M{"jobname": jobName}).Sort("-buildnumber").One(&latest_build)
+			if err_latest_build != nil {
+				latest_build_number = 0
+			} else {
+				latest_build_number = latest_build.Buildnumber
+			}
+			log.Println("INFO: Lastest Build Number = ", latest_build_number)
 			for buildJob := range buildjobs {
-				isExist := CheckBuildExistInDB(buildJob, coll)
-				if isExist {
+				//isExist := CheckBuildExistInDB(buildJob, coll)
+				buildEle := strings.Split(buildJob, "/")
+				buildNumber, _ := strconv.Atoi(buildEle[len(buildEle)-1])
+				if buildNumber <= latest_build_number {
 					var _ = err
+					log.Println("INFO: Already exist on database: ", buildJob)
 				} else {
 					log.Println("INFO: Get information from ", buildJob)
 					v, b := AnalyzeBuild(buildJob)
