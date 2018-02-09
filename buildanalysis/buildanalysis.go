@@ -5,6 +5,8 @@ import (
 	"encoding/xml"
 	"flag"
 	"fmt"
+	"github.com/all4dich/golang/buildanalysis/builddata"
+	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"io/ioutil"
@@ -15,9 +17,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/all4dich/golang/buildanalysis/builddata"
-	"github.com/all4dich/golang/buildanalysis/oebuildjobs"
 )
 
 var validId = regexp.MustCompile(`^(BB_VERSION|BUILD_SYS|DATETIME|DISTRO|DISTRO_VERSION|MACHINE|NATIVELSBSTRING|TARGET_FPU|TARGET_SYS|TUNE_FEATURES|WEBOS_DISTRO_BUILD_ID|WEBOS_DISTRO_MANUFACTURING_VERSION|WEBOS_DISTRO_RELEASE_CODENAME|WEBOS_DISTRO_TOPDIR_DESCRIBE|WEBOS_DISTRO_TOPDIR_REVISION|WEBOS_ENCRYPTION_KEY_TYPE|meta|meta-qt5|meta-starfish-product)\ .*`)
