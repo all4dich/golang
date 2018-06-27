@@ -171,10 +171,13 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 		log.Fatal("Can't open a file " + buildXmlFile)
 	}
 	r := bufio.NewReader(buildXml)
-	buildXmlDat, err := ioutil.ReadAll(r)
+	buildXmlbytes, err := ioutil.ReadAll(r)
 	if err != nil {
 		log.Fatal("ERROR: Cannot read data from a xml file ")
 	}
+	buildXmlDatStr := string(buildXmlbytes)
+	fileDataStrNew := strings.Replace(buildXmlDatStr, "<?xml version='1.1'", "<?xml version='1.0'", 1)
+	buildXmlDat := []byte(fileDataStrNew)
 	xmlEntity := oebuildjobs.BuildInfo{}
 	err = xml.Unmarshal(buildXmlDat, &xmlEntity)
 	v = xmlEntity
