@@ -185,6 +185,15 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 	return v, b
 }
 
+func contains(intArray []int, number int) bool {
+	for _, v := range intArray {
+		if v == number {
+			return true
+		}
+	}
+	return false
+}
+
 func main() {
 	jenkinsHome := flag.String("jenkinsHome", "/binary/build_results/jenkins_home_backup", "Jenkins configuration and data directory")
 	jobName := flag.String("jobName", "starfish-drd4tv-official-h15", "Set a job name to parse")
@@ -210,6 +219,24 @@ func main() {
 	dbUrl := fmt.Sprintf("%s:%s", *dbHost, *dbPort)
 	buildjobs := make(chan string, *nThread)
 	done := make(chan int, *nThread)
+
+	session_to_get_number_of_builds, err_session := mgo.Dial(dbUrl)
+	if err_session != nil {
+		panic(err_session)
+	}
+	defer session_to_get_number_of_builds.Close()
+	db_main := session_to_get_number_of_builds.DB(*dbName)
+	db_main.Login(*dbUser, *dbPass)
+	coll_main := db_main.C(*dbColl)
+	var curr_builds []builddata.BuildData
+	err_coll := coll_main.Find(bson.M{"jobname": jobName}).All(&curr_builds)
+	if err_coll != nil {
+		panic(err_coll)
+	}
+	buildNumbers := make([]int, len(curr_builds))
+	for i, v := range curr_builds {
+		buildNumbers[i] = v.Buildnumber
+	}
 
 	// Create goroutines that handle each build's log and build.xml files
 	for j := 0; j < *nThread; j++ {
@@ -246,7 +273,8 @@ func main() {
 				//isExist := CheckBuildExistInDB(buildJob, coll)
 				buildEle := strings.Split(buildJob, "/")
 				buildNumber, _ := strconv.Atoi(buildEle[len(buildEle)-1])
-				if buildNumber <= latest_build_number {
+				//if buildNumber <= latest_build_number {
+				if contains(buildNumbers, buildNumber) {
 					var _ = err
 					log.Println("INFO: Already exist on database: ", buildJob)
 				} else {
