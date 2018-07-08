@@ -228,11 +228,18 @@ func main() {
 	db_main := session_to_get_number_of_builds.DB(*dbName)
 	db_main.Login(*dbUser, *dbPass)
 	coll_main := db_main.C(*dbColl)
+	// curr_builds
+	// - A list of builds that exist in a database for a job
+	// - By default, it's a empty list for builddata.BuildData
 	var curr_builds []builddata.BuildData
 	err_coll := coll_main.Find(bson.M{"jobname": jobName}).All(&curr_builds)
 	if err_coll != nil {
 		panic(err_coll)
 	}
+	// buildNumbers
+	// - A list of build numbers
+	// - Filled from 'curr_builds'
+	// - Used to check if a target build on build job directory has already been inserted into a database
 	buildNumbers := make([]int, len(curr_builds))
 	for i, v := range curr_builds {
 		buildNumbers[i] = v.Buildnumber
