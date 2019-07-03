@@ -12,6 +12,7 @@ type BuildData struct {
 	Host                    string
 	Duration                int
 	Start                   int
+	Waiting                 int
 	Workspace               string
 	Description             string
 	Timediff                int

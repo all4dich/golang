@@ -83,6 +83,7 @@ type commonBuildAttr struct {
 	Host        string `xml:"builtOn"`
 	Result      string `xml:"result"`
 	Start       int    `xml:"startTime"`
+	WaitingTime int    `xml:"actions>jenkins.metrics.impl.TimeInQueueAction>queuingDurationMillis"`
 	Workspace   string `xml:"workspace"`
 }
 

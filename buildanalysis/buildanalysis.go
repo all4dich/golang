@@ -286,6 +286,7 @@ func main() {
 					i_buildnumber, _ := strconv.Atoi(b["buildnumber"])
 					i_duration := v.Duration / 1000
 					i_start := v.Start / 1000
+					i_waiting_in_queue := v.WaitingTime / 1000
 					i_timediff := 0
 					if v.GerritChangeInfo.ReceivedOn != 0 {
 						i_timediff = i_start - (v.GerritChangeInfo.ReceivedOn / 1000)
@@ -320,6 +321,7 @@ func main() {
 						Host:        v.Host,
 						Duration:    i_duration,
 						Start:       i_start,
+						Waiting:     i_waiting_in_queue,
 						Workspace:   v.Workspace,
 						Description: v.Description,
 						Timediff:    i_timediff,
