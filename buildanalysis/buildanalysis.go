@@ -139,7 +139,7 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 				buildInfo["caprica"] = eachLineSplit[7]
 				continue
 			}
-			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && r[17] == "BUILD-ARTIFACTS/build_changes.log" {
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && strings.Split(r[17],"/")[0] == "BUILD-ARTIFACTS" {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
@@ -158,6 +158,10 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 				continue
 			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "sh" && r[13] == "-c" {
+				buildInfo["time_build_sh"] = eachLineSplit[2]
+				continue
+			}
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "ssh" && r[13] == "-o" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
 				continue
 			}
