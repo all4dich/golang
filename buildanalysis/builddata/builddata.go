@@ -20,6 +20,7 @@ type BuildData struct {
 	GerritChangeInfo        bson.M
 	GitChangeInfo           bson.M
 	Time_build_sh           float64
+	Time_bitbake            float64
 	Time_rm_BUILD           float64
 	Time_rm_BUILD_ARTIFACTS float64
 	Time_rm_downloads       float64

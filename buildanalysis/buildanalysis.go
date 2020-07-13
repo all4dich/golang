@@ -135,6 +135,16 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 			r := ParseMeta(eachLine)
 			r_length := len(r)
 			var _ = eachLineSplit
+			last_element := ""
+			last_element_split := strings.Split(last_element, "/")
+			last_element_size := 1
+
+			if r_length > 2 {
+				last_element = r[r_length-1]
+				last_element_split = strings.Split(last_element, "/")
+				last_element_size = len(last_element_split)
+			}
+
 			// Extract values for keys in 'keyMap' map object
 			if _, ok := keyMap[eachLineSplit[0]]; ok {
 				if r_length == 3 {
@@ -153,8 +163,9 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 				buildInfo["num_of_from_scratch"] = eachLineSplit[7]
 				continue
 			}
-			if eachLineSplit[0] == "NOTE:" && eachLineSplit[1] == "Your" && eachLineSplit[2] == "entry" {
-				buildInfo["caprica"] = eachLineSplit[7]
+			// Check every line's last element if it has a caprica report url
+			if last_element_size > 3 && eachLineSplit[0] == "NOTE:" && last_element_split[last_element_size-3] == "Builds" && last_element_split[last_element_size-2] == "Details" {
+				buildInfo["caprica"] = last_element
 				continue
 			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && strings.Split(r[17], "/")[0] == "BUILD-ARTIFACTS" {
@@ -185,6 +196,10 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 			}
 			if r_length > 18 && r[0] == "TIME:" && r[12] == "ssh" && r[13] == "-o" {
 				buildInfo["time_build_sh"] = eachLineSplit[2]
+				continue
+			}
+			if r_length > 12 && r[0] == "TIME:" && r[11] == "bitbake" {
+				buildInfo["time_bitbake"] = eachLineSplit[1]
 				continue
 			}
 		}
@@ -397,6 +412,7 @@ func main() {
 							"repositoryurl": v.GitChangeInfo.Repositoryurl,
 						},
 						Time_build_sh:           GetFloat(b["time_build_sh"], i_buildnumber),
+						Time_bitbake:            GetFloat(b["time_bitbake"], i_buildnumber),
 						Time_rm_BUILD:           GetFloat(b["time_rm_BUILD"], i_buildnumber),
 						Time_rm_BUILD_ARTIFACTS: GetFloat(b["time_rm_BUILD_ARTIFACTS"], i_buildnumber),
 						Time_rm_downloads:       GetFloat(b["time_rm_downloads"], i_buildnumber),
