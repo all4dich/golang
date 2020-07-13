@@ -11,6 +11,7 @@ type BuildData struct {
 	Result                  string
 	Host                    string
 	Duration                int
+	Duration_in_queue       float64
 	Start                   int
 	Waiting                 int
 	Workspace               string

@@ -335,6 +335,7 @@ func main() {
 					i_duration := v.Duration / 1000
 					i_start := v.Start / 1000
 					i_waiting_in_queue := v.WaitingTime / 1000
+					i_duration_in_queue := float64(v.WaitingTime) / 1000
 					i_timediff := 0
 					if v.GerritChangeInfo.ReceivedOn != 0 {
 						i_timediff = i_start - (v.GerritChangeInfo.ReceivedOn / 1000)
@@ -363,18 +364,19 @@ func main() {
 					i_parameters["caprica"] = b["caprica"]
 
 					coll.Insert(&builddata.BuildData{
-						Jobname:     i_jobname,
-						Buildnumber: i_buildnumber,
-						Result:      v.Result,
-						Host:        v.Host,
-						Duration:    i_duration,
-						Start:       i_start,
-						Waiting:     i_waiting_in_queue,
-						Workspace:   v.Workspace,
-						Description: v.Description,
-						Timediff:    i_timediff,
-						Machine:     i_machine,
-						Parameters:  i_parameters,
+						Jobname:           i_jobname,
+						Buildnumber:       i_buildnumber,
+						Result:            v.Result,
+						Host:              v.Host,
+						Duration:          i_duration,
+						Duration_in_queue: i_duration_in_queue,
+						Start:             i_start,
+						Waiting:           i_waiting_in_queue,
+						Workspace:         v.Workspace,
+						Description:       v.Description,
+						Timediff:          i_timediff,
+						Machine:           i_machine,
+						Parameters:        i_parameters,
 						Cause: bson.M{
 							"parent_project":     v.Causes.Parent_project,
 							"parent_user":        v.Causes.Parent_user,
