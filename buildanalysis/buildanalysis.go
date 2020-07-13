@@ -110,6 +110,23 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 			line     []byte
 		)
 		var _ = isPrefix
+		/**
+				 * keyMap: List of keys that are written on a build logs with values like belows
+				 * Example:
+				 *     BB_VERSION           = "1.40.0"
+		     *     BUILD_SYS            = "x86_64-linux"
+		     *     NATIVELSBSTRING      = "ubuntu-18.04"
+		     *     TARGET_SYS           = "arm-starfish-linux-gnueabi"
+		     *     MACHINE              = "k7hp"
+		     *     DISTRO               = "starfish"
+		     *     DISTRO_VERSION       = "6.0.0"
+		     *     TUNE_FEATURES        = "arm armv7a vfp thumb neon cortexa9 webos-cortexa9"
+		     *     TARGET_FPU           = "softfp"
+		     *     WEBOS_DISTRO_MANUFACTURING_VERSION = "00.00.00"
+		     *     WEBOS_ENCRYPTION_KEY_TYPE = "develkey"
+		     *     WEBOS_DISTRO_RELEASE_CODENAME = "kisscurl-kalaupapa"
+		     *     WEBOS_DISTRO_BUILD_ID = "verf.hq-1445
+		*/
 		keyMap := map[string]string{"BB_VERSION": "", "BUILD_SYS": "", "DATETIME": "", "DISTRO": "", "DISTRO_VERSION": "", "MACHINE": "", "NATIVELSBSTRING": "", "TARGET_FPU": "", "TARGET_SYS": "", "TUNE_FEATURES": "", "WEBOS_DISTRO_BUILD_ID": "", "WEBOS_DISTRO_MANUFACTURING_VERSION": "", "WEBOS_DISTRO_RELEA    SE_CODENAME": "", "WEBOS_DISTRO_TOPDIR_DESCRIBE": "", "WEBOS_DISTRO_TOPDIR_REVISION": "", "WEBOS_ENCRYPTION_KEY_TYPE": "", "meta": "", "meta-qt5": "", "meta-starfish-product": ""}
 		for err == nil {
 			line, isPrefix, err = buildLogReader.ReadLine()
@@ -118,6 +135,7 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 			r := ParseMeta(eachLine)
 			r_length := len(r)
 			var _ = eachLineSplit
+			// Extract values for keys in 'keyMap' map object
 			if _, ok := keyMap[eachLineSplit[0]]; ok {
 				if r_length == 3 {
 					buildInfo[r[0]] = r[2]
@@ -139,7 +157,11 @@ func AnalyzeBuild(buildDir string) (v oebuildjobs.BuildInfo, b map[string]string
 				buildInfo["caprica"] = eachLineSplit[7]
 				continue
 			}
-			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && strings.Split(r[17],"/")[0] == "BUILD-ARTIFACTS" {
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "rsync" && r[13] == "-arz" && strings.Split(r[17], "/")[0] == "BUILD-ARTIFACTS" {
+				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
+				continue
+			}
+			if r_length > 18 && r[0] == "TIME:" && r[12] == "bash" && r[13] == "-c" && r[17] == "BUILD-ARTIFACTS" {
 				buildInfo["time_rsync_artifacts"] = eachLineSplit[2]
 				continue
 			}
