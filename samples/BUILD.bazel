@@ -1,0 +1,20 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "samples_lib",
+    srcs = [
+        "test.go",
+        "test2.go",
+        "test3.go",
+        "test4.go",
+        "test_sample.go",
+    ],
+    importpath = "github.com/all4dich/golang/samples",
+    visibility = ["//visibility:private"],
+)
+
+go_binary(
+    name = "samples",
+    embed = [":samples_lib"],
+    visibility = ["//visibility:public"],
+)
